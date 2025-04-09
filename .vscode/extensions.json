@@ -1,0 +1,17 @@
+{
+	"recommendations": [
+		"dsznajder.es7-react-js-snippets",
+		"dbaeumer.vscode-eslint",
+		"digitalbrainstem.javascript-ejs-support",
+		"mikestead.dotenv",
+		"eamodio.gitlens",
+		"wix.vscode-import-cost",
+		"christian-kohler.npm-intellisense",
+		"yoavbls.pretty-ts-errors",
+		"prisma.prisma",
+		"willluke.nextjs",
+		"bradlc.vscode-tailwindcss",
+		"alfredbirk.tailwind-documentation",
+		"kalimahapps.tailwindcss-kit"
+	]
+}
