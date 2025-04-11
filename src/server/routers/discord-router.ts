@@ -292,7 +292,9 @@ export const discordRouter = j.router({
 			});
 
 		return c.superjson({
-			channels,
+			channels: channels.filter(
+				(channel) => channel.type === 0 || channel.type === 5
+			),
 			guildId: onboardingGuild,
 			message: "Fetched all channels for the onboarded guild",
 		});
