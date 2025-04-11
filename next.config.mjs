@@ -3,6 +3,12 @@ const nextConfig = {
 	devIndicators: {
 		position: "bottom-right",
 	},
+	images: {
+		remotePatterns: [
+			new URL("https://cdn.discordapp.com/**"),
+			new URL("https://archive.org/**"),
+		],
+	},
 };
 
 export default nextConfig;

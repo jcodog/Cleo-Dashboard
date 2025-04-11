@@ -22,37 +22,78 @@ export const authRouter = j.router({
 			});
 		}
 
-		try {
-			const syncedUser = await db.users.upsert({
-				where: {
-					extId: user.id,
-				},
-				update: {
-					username: user.username!,
-					email: user.primaryEmailAddress!.emailAddress,
-					forename: user.firstName!,
-					surname: user.lastName!,
-				},
-				create: {
-					extId: user.id!,
-					email: user.primaryEmailAddress!.emailAddress,
-					username: user.username!,
-					forename: user.firstName!,
-					surname: user.lastName!,
-				},
+		const discordId = user.externalAccounts.find(
+			(account) => account.provider === "discord"
+		)?.externalId;
+
+		if (!discordId) {
+			return c.json({
+				success: false,
+				message:
+					"Discord id is required to sync the user with the database",
 			});
+		}
+
+		try {
+			const existingUser = await db.users.findUnique({
+				where: { discordId },
+				include: { limits: true },
+			});
+
+			let syncedUser;
+
+			if (existingUser) {
+				// update
+				syncedUser = await db.users.update({
+					where: { discordId },
+					data: {
+						username: user.username || "anonymous",
+						email:
+							user.primaryEmailAddress?.emailAddress ||
+							"no@email.com",
+						extId: existingUser.extId
+							? existingUser.extId
+							: user.id,
+						limits: existingUser.limits
+							? { update: { date: new Date() } }
+							: { create: { date: new Date() } },
+					},
+					include: {
+						limits: true,
+					},
+				});
+			} else {
+				// create
+				syncedUser = await db.users.create({
+					data: {
+						username: user.username || "anonymous",
+						email:
+							user.primaryEmailAddress?.emailAddress ||
+							"no@email.com",
+						extId: user.id,
+						discordId,
+						limits: {
+							create: {
+								date: new Date(),
+							},
+						},
+					},
+					include: { limits: true },
+				});
+			}
 
 			return c.json({
 				success: true,
-				message: "User synced with the database",
-				user: syncedUser,
+				message: "User synced successfully",
+				syncedUser,
 			});
 		} catch (err) {
 			console.error(err);
 
 			return c.json({
 				success: false,
-				message: "Failed to sync user with the database",
+				message:
+					"Something went wrong syncing the user with the database",
 			});
 		}
 	}),

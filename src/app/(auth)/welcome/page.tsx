@@ -82,28 +82,6 @@ const WelcomePage = () => {
 						Synced <BsCloudCheck className="ml-2" />
 					</Heading>
 
-					<div className="flex flex-col gap-2 items-center justify-center">
-						<p className="tracking-tight text-pretty text-sm font-semibold text-center">
-							The following data has been synced
-							<br />
-							with the database
-						</p>
-						<p className="tracking-tight text-pretty text-sm">
-							username:{" "}
-							<span className="font-mono">{user.username}</span>
-							<br />
-							email:{" "}
-							<span className="font-mono">{user.email}</span>
-							<br />
-							forename:{" "}
-							<span className="font-mono">{user.forename}</span>
-							<br />
-							surname:{" "}
-							<span className="font-mono">{user.surname}</span>
-							<br />
-						</p>
-					</div>
-
 					<Button
 						onClick={() => {
 							router.push("/dashboard");

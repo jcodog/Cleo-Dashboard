@@ -2,8 +2,9 @@ import { getDb } from "@/lib/prisma";
 import { env } from "hono/adapter";
 import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
-import { jstack } from "jstack";
+import { InferMiddlewareOutput, jstack } from "jstack";
 import { createClerkClient, verifyToken } from "@clerk/backend";
+import { RESTGetAPIUserResult } from "discord-api-types/v10";
 
 interface Env {
 	Bindings: {
@@ -11,17 +12,20 @@ interface Env {
 		CLERK_SECRET_KEY: string;
 		CLERK_PUBLISHABLE_KEY: string;
 		CLERK_JWT_KEY: string;
+		DISCORD_BOT_TOKEN: string;
+		CLEO_API_KEY: string;
+		CLEO_KV: KVNamespace;
 	};
 }
 
 export const j = jstack.init<Env>();
 
 const dbMiddleware = j.middleware(async ({ c, next }) => {
-	const { DATABASE_URL } = env(c);
+	const { DATABASE_URL, CLEO_KV } = env(c);
 
 	const db = getDb(DATABASE_URL);
 
-	return await next({ db });
+	return await next({ db, kv: CLEO_KV });
 });
 
 const clerkMiddleware = j.middleware(async ({ c, next }) => {
@@ -83,6 +87,63 @@ const clerkMiddleware = j.middleware(async ({ c, next }) => {
 	}
 });
 
+const botMiddleware = j.middleware(async ({ c, ctx, next }) => {
+	const { CLEO_API_KEY, DISCORD_BOT_TOKEN } = env(c);
+	const { db } = ctx as InferMiddlewareOutput<typeof dbMiddleware>;
+	const authorizationHeader = c.req.header("Authorization");
+	const discordId = c.req.header("X-Discord-ID");
+
+	if (!authorizationHeader) {
+		throw new HTTPException(401, {
+			message: "Unauthorized: No authorization header",
+		});
+	}
+
+	const apiKey = authorizationHeader.replace("Bearer ", "");
+
+	if (!apiKey || apiKey !== CLEO_API_KEY) {
+		throw new HTTPException(401, {
+			message: "Unauthorized: Missing or invalid API Key",
+		});
+	}
+
+	if (!discordId) {
+		throw new HTTPException(400, {
+			message: "Missing discord id header",
+		});
+	}
+
+	let user = await db.users.findUnique({ where: { discordId } });
+
+	if (!user) {
+		const discordUser = (await (
+			await fetch("https://discord.com/api/v10/users/" + discordId, {
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: "Bearer " + DISCORD_BOT_TOKEN,
+				},
+			})
+		).json()) as RESTGetAPIUserResult;
+
+		user = await db.users.create({
+			data: {
+				discordId,
+				username: discordUser.username,
+				limits: {
+					create: {
+						date: new Date(),
+					},
+				},
+			},
+			include: {
+				limits: true,
+			},
+		});
+	}
+
+	return await next({ user });
+});
+
 /**
  * Public (unauthenticated) procedures
  *
@@ -96,3 +157,16 @@ export const publicProcedure = j.procedure.use(dbMiddleware);
  * This is used as a base for authenticating api calls against clerk, applying the client and token to requests for when checking against a valid user is not required.
  */
 export const clerkProcedure = publicProcedure.use(clerkMiddleware);
+
+/**
+ * Discord bot procedures
+ *
+ * These are used only by the Cleo discord bot and pre-load a user object including limits to the request for faster processing
+ */
+export const botProcedure = publicProcedure.use(botMiddleware);
+
+/**
+ * Authenticated procedures
+ *
+ * This is used as the method to accurately link the request to a user record in the database.
+ */

@@ -2,7 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "cleo-dash",
 	"main": "src/server/index.ts",
-	"compatibility_date": "2025-03-27",
+	"compatibility_date": "2025-04-10",
 	"compatibility_flags": [
 		"nodejs_compat",
 		"nodejs_als",
@@ -12,6 +12,12 @@
 		{
 			"pattern": "api.cleoai.cloud",
 			"custom_domain": true
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "CLEO_KV",
+			"id": "5a737364d95d461f92a4059535ddc00b"
 		}
 	],
 	"workers_dev": false,

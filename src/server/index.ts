@@ -1,6 +1,8 @@
-import { authRouter } from "@/server/routers/auth-router";
 import { j } from "./jstack";
 import { cors } from "hono/cors";
+import { authRouter } from "@/server/routers/auth-router";
+import { discordRouter } from "@/server/routers/discord-router";
+import { cleoRouter } from "@/server/routers/cleo-router";
 
 /**
  * This is your base API.
@@ -32,6 +34,8 @@ const api = j
  */
 const appRouter = j.mergeRouters(api, {
 	auth: authRouter,
+	discord: discordRouter,
+	cleo: cleoRouter,
 });
 
 export type AppRouter = typeof appRouter;
