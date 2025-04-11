@@ -22,8 +22,10 @@ export const authRouter = j.router({
 			});
 		}
 
+		console.log(user.externalAccounts);
+
 		const discordId = user.externalAccounts.find(
-			(account) => account.provider === "discord"
+			(account) => account.provider === "oauth_discord"
 		)?.externalId;
 
 		if (!discordId) {
