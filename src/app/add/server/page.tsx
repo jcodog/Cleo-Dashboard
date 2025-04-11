@@ -122,8 +122,7 @@ const AddServerPage = () => {
 
 	useEffect(() => {
 		if (generatedUrl && generatedUrl.url) {
-			window.open(generatedUrl.url, "_blank");
-			router.push(`/dashboard/${guildId}?firstAdd=true`);
+			router.push(generatedUrl.url);
 		}
 	}, [generatedUrl]);
 

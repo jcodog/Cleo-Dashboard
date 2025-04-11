@@ -181,7 +181,7 @@ export const discordRouter = j.router({
 					"https://discord.com/oauth2/authorize?client_id=1223326305169182740";
 				const permissionsAndScopes =
 					mode === "server"
-						? `&permissions=593182191516919&integration_type=0&scope=bot&disable_guild_select=true&guild_id=${guildId}&response_type=code`
+						? `&permissions=593182191516919&integration_type=0&scope=bot&disable_guild_select=true&guild_id=${guildId}`
 						: "&permissions=593182191516919&integration_type=1&scope=bot";
 				const redirectUrl =
 					"&redirect_url=https://cleoai.cloud/add/" +
