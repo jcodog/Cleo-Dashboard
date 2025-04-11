@@ -76,11 +76,56 @@ const AddServerPage = () => {
 		},
 	});
 
+	const { mutate: generateUrl, data: generatedUrl } = useMutation({
+		mutationKey: ["generate-add-url"],
+		mutationFn: async () => {
+			const token = await getToken();
+
+			const userRes = await client.discord.getOauth2Data.$get(undefined, {
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			});
+
+			const user = await userRes.json();
+
+			if (!user.currentOauth2Data || !user.currentOauth2Data.user) {
+				return {
+					success: false,
+					message: "Cannot obtain discord ID for user",
+					url: null,
+				};
+			}
+
+			const res = await client.discord.addCleo.$post(
+				{
+					mode: "server",
+					guildId,
+					discordId: user.currentOauth2Data.user.id,
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+
+			return await res.json();
+		},
+	});
+
 	useEffect(() => {
 		if (data && data.guilds) {
 			setGuilds(data.guilds);
 		}
 	}, [data]);
+
+	useEffect(() => {
+		if (generatedUrl && generatedUrl.url) {
+			router.push("/add/server/next");
+			window.open(generatedUrl.url, "_blank")!.focus();
+		}
+	}, [generatedUrl]);
 
 	return (
 		<section className="flex flex-1 flex-col items-center justify-center gap-8 max-w-3xl">
@@ -103,7 +148,7 @@ const AddServerPage = () => {
 						className="flex flex-col items-center justify-center gap-4"
 						onSubmit={(e) => {
 							e.preventDefault();
-							router.push("/add/server/next");
+							generateUrl();
 						}}
 					>
 						<Select

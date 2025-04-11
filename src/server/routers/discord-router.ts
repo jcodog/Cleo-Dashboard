@@ -197,6 +197,7 @@ export const discordRouter = j.router({
 
 	getOnboardingGuildChannels: clerkProcedure.query(async ({ c, ctx }) => {
 		const { client, token, kv } = ctx;
+		const { DISCORD_BOT_TOKEN } = env(c);
 
 		const auth = await client.sessions.getSession(token.sid);
 		const userId = auth.userId;
@@ -263,17 +264,24 @@ export const discordRouter = j.router({
 				message: "No guild is being onboarded by the user",
 			});
 
-		const channels = (await (
-			await fetch(
-				`https://discord.com/api/v10/guilds/${onboardingGuild}/channels`,
-				{
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${accessToken}`,
-					},
-				}
-			)
-		).json()) as RESTGetAPIGuildChannelsResult;
+		const res = await fetch(
+			`https://discord.com/api/v10/guilds/${onboardingGuild}/channels`,
+			{
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${DISCORD_BOT_TOKEN}`,
+				},
+			}
+		);
+
+		if (!res.ok)
+			return c.json({
+				channels: null,
+				guildId: onboardingGuild,
+				message: "Bot not in the selected guild. Retrying in 1 minute.",
+			});
+
+		const channels = (await res.json()) as RESTGetAPIGuildChannelsResult;
 
 		if (!channels)
 			return c.json({
@@ -299,6 +307,7 @@ export const discordRouter = j.router({
 		.mutation(async ({ c, ctx, input }) => {
 			const { db, client, token } = ctx;
 			const { guildId, channelId } = input;
+			const { DISCORD_BOT_TOKEN } = env(c);
 
 			const auth = await client.sessions.getSession(token.sid);
 			const userId = auth.userId;
@@ -358,7 +367,7 @@ export const discordRouter = j.router({
 				await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
 					headers: {
 						"Content-Type": "application/json",
-						Authorization: `Bearer ${accessToken}`,
+						Authorization: `Bearer ${DISCORD_BOT_TOKEN}`,
 					},
 				})
 			).json()) as RESTGetAPIGuildResult;

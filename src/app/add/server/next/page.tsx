@@ -41,6 +41,9 @@ const ServerAddNextPage = () => {
 
 			return await res.json();
 		},
+		refetchInterval: (query) => {
+			return query.state.data?.channels ? false : 60000;
+		},
 	});
 
 	const { mutate, data: configuredGuild } = useMutation({
@@ -64,67 +67,23 @@ const ServerAddNextPage = () => {
 		},
 	});
 
-	const { mutate: generateUrl, data: generatedUrl } = useMutation({
-		mutationKey: ["generate-add-url"],
-		mutationFn: async () => {
-			const token = await getToken();
-
-			const userRes = await client.discord.getOauth2Data.$get(undefined, {
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
-			});
-
-			const user = await userRes.json();
-
-			if (!user.currentOauth2Data || !user.currentOauth2Data.user) {
-				return {
-					success: false,
-					message: "Cannot obtain discord ID for user",
-					url: null,
-				};
-			}
-
-			const res = await client.discord.addCleo.$post(
-				{
-					mode: "server",
-					guildId,
-					discordId: user.currentOauth2Data.user.id,
-				},
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
-
-			return await res.json();
-		},
-	});
-
 	useEffect(() => {
 		if (data && data.channels && data.guildId) {
 			setChannels(data.channels);
 			setGuildId(data.guildId);
 		} else if (data && !data.channels) {
-			console.error(data.message);
+			toast.error(data.message);
 		}
 	}, [data]);
 
 	useEffect(() => {
 		if (configuredGuild && configuredGuild.configured) {
 			toast.success(configuredGuild.message);
-			generateUrl();
+			router.push("/dashboard");
 		} else if (configuredGuild && !configuredGuild.configured) {
 			toast.error(configuredGuild.message);
 		}
 	}, [configuredGuild]);
-
-	useEffect(() => {
-		if (generatedUrl && generatedUrl.url) {
-			router.push(generatedUrl.url);
-		}
-	}, [generatedUrl]);
 
 	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -141,6 +100,12 @@ const ServerAddNextPage = () => {
 					channel for updates from Cleo, this is used to send you
 					information about new features and changes to commands. This
 					shouldn't be more than once a month.
+				</p>
+				<p>
+					You will need to complete adding Cleo to your server first
+					before you can select a channel. Don't worry, the channels
+					will automatically appear once you have added Cleo to your
+					server.
 				</p>
 			</div>
 
