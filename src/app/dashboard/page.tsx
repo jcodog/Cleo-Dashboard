@@ -44,12 +44,6 @@ const DashboardHomePage = () => {
 				return botData;
 			}
 
-			console.log(
-				userData.guilds.filter((guild) =>
-					botData.guilds.some((botGuild) => botGuild.id === guild.id)
-				)
-			);
-
 			const sharedGuilds = userData.guilds.filter(
 				(guild) =>
 					(BigInt(guild.permissions) & (BigInt(8) | BigInt(32))) !==
