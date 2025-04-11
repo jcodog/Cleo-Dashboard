@@ -2,6 +2,7 @@ import { clerkProcedure, j, publicProcedure } from "@/server/jstack";
 import {
 	RESTGetAPICurrentUserGuildsResult,
 	RESTGetAPIGuildChannelsResult,
+	RESTGetAPIGuildResult,
 	RESTGetAPIOAuth2CurrentAuthorizationResult,
 } from "discord-api-types/v10";
 import { env } from "hono/adapter";
@@ -183,12 +184,8 @@ export const discordRouter = j.router({
 					mode === "server"
 						? `&permissions=593182191516919&integration_type=0&scope=bot&disable_guild_select=true&guild_id=${guildId}`
 						: "&permissions=593182191516919&integration_type=1&scope=bot";
-				const redirectUrl =
-					"&redirect_url=https://cleoai.cloud/add/" +
-					(mode === "user" ? "user" : "bot") +
-					"/next";
 
-				return baseUrl + permissionsAndScopes + redirectUrl;
+				return baseUrl + permissionsAndScopes;
 			};
 
 			return c.json({
@@ -200,7 +197,6 @@ export const discordRouter = j.router({
 
 	getOnboardingGuildChannels: clerkProcedure.query(async ({ c, ctx }) => {
 		const { client, token, kv } = ctx;
-		const { DISCORD_BOT_TOKEN } = env(c);
 
 		const auth = await client.sessions.getSession(token.sid);
 		const userId = auth.userId;
@@ -212,12 +208,14 @@ export const discordRouter = j.router({
 		if (!tokens)
 			return c.json({
 				channels: null,
+				guildId: null,
 				message: "No connected discord accounts for the user",
 			});
 
 		if (!tokens[0] || !tokens[0].token)
 			return c.json({
 				channels: null,
+				guildId: null,
 				message: "No access token for the user",
 			});
 
@@ -233,6 +231,7 @@ export const discordRouter = j.router({
 		if (!response.ok)
 			return c.json({
 				channels: null,
+				guildId: null,
 				message: response.statusText,
 			});
 
@@ -242,6 +241,7 @@ export const discordRouter = j.router({
 		if (!data)
 			return c.json({
 				channels: null,
+				guildId: null,
 				message: "No current Oauth2 data recieved",
 			});
 
@@ -250,6 +250,7 @@ export const discordRouter = j.router({
 		if (!discordId)
 			return c.json({
 				channels: null,
+				guildId: null,
 				message: "No discord user id found",
 			});
 
@@ -258,6 +259,7 @@ export const discordRouter = j.router({
 		if (!onboardingGuild)
 			return c.json({
 				channels: null,
+				guildId: null,
 				message: "No guild is being onboarded by the user",
 			});
 
@@ -267,7 +269,7 @@ export const discordRouter = j.router({
 				{
 					headers: {
 						"Content-Type": "application/json",
-						Authorization: `Bearer ${DISCORD_BOT_TOKEN}`,
+						Authorization: `Bearer ${accessToken}`,
 					},
 				}
 			)
@@ -276,12 +278,120 @@ export const discordRouter = j.router({
 		if (!channels)
 			return c.json({
 				channels: null,
+				guildId: onboardingGuild,
 				message: "Unable to fetch channels for the onboarded guild",
 			});
 
 		return c.superjson({
 			channels,
+			guildId: onboardingGuild,
 			message: "Fetched all channels for the onboarded guild",
 		});
 	}),
+
+	configureGuild: clerkProcedure
+		.input(
+			z.object({
+				guildId: z.string(),
+				channelId: z.string(),
+			})
+		)
+		.mutation(async ({ c, ctx, input }) => {
+			const { db, client, token } = ctx;
+			const { guildId, channelId } = input;
+
+			const auth = await client.sessions.getSession(token.sid);
+			const userId = auth.userId;
+
+			const tokens = (
+				await client.users.getUserOauthAccessToken(userId, "discord")
+			).data;
+
+			if (!tokens)
+				return c.json({
+					configured: false,
+					message: "No connected discord accounts for the user",
+				});
+
+			if (!tokens[0] || !tokens[0].token)
+				return c.json({
+					configured: false,
+					message: "No access token for the user",
+				});
+
+			const accessToken = tokens[0].token;
+
+			const response = await fetch(
+				"https://discord.com/api/v10/oauth2/@me",
+				{
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${accessToken}`,
+					},
+				}
+			);
+
+			if (!response.ok)
+				return c.json({
+					configured: false,
+					message: response.statusText,
+				});
+
+			const data =
+				(await response.json()) as RESTGetAPIOAuth2CurrentAuthorizationResult;
+
+			if (!data)
+				return c.json({
+					configured: false,
+					message: "No current Oauth2 data recieved",
+				});
+
+			const discordId = data.user?.id;
+
+			if (!discordId)
+				return c.json({
+					configured: false,
+					message: "No discord user id found",
+				});
+
+			const guild = (await (
+				await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${accessToken}`,
+					},
+				})
+			).json()) as RESTGetAPIGuildResult;
+
+			if (!guild)
+				return c.json({
+					configured: false,
+					message: "No guild with that id found",
+				});
+
+			const user = await db.users.findUnique({ where: { discordId } });
+
+			if (!user)
+				return c.json({
+					configured: false,
+					message: "User does not exist in db",
+				});
+
+			const configuredGuild = await db.servers.create({
+				data: {
+					id: guild.id,
+					name: guild.name,
+					ownerId: guild.owner_id,
+					updatesChannel: channelId,
+				},
+			});
+
+			if (!configuredGuild)
+				return c.json({
+					configured: false,
+					message: "Error creating and configuring the guild",
+				});
+
+			return c.json({ configured: true, message: "Guild configured" });
+		}),
 });
