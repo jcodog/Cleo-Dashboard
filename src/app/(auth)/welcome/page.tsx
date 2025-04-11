@@ -42,7 +42,7 @@ const WelcomePage = () => {
 	useEffect(() => {
 		if (data && data.success) {
 			toast.success(data.message);
-			setUser(data.user);
+			setUser(data.syncedUser);
 		}
 
 		if (data && !data.success) {
