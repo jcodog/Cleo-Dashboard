@@ -4,7 +4,7 @@ import { Heading } from "@/components/Heading";
 import { Button } from "@/components/ui/button";
 import { client } from "@/lib/client";
 import { useAuth } from "@clerk/nextjs";
-import { Users } from "@prisma/client";
+import { Users } from "@/prisma/client";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, CloudUpload, Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
