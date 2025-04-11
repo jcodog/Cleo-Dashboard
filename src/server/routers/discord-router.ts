@@ -269,7 +269,7 @@ export const discordRouter = j.router({
 			{
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${DISCORD_BOT_TOKEN}`,
+					Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
 				},
 			}
 		);
@@ -278,7 +278,8 @@ export const discordRouter = j.router({
 			return c.json({
 				channels: null,
 				guildId: onboardingGuild,
-				message: "Bot not in the selected guild. Retrying in 1 minute.",
+				message:
+					"Bot not in the selected guild. Retrying in 10 seconds.",
 			});
 
 		const channels = (await res.json()) as RESTGetAPIGuildChannelsResult;
@@ -367,7 +368,7 @@ export const discordRouter = j.router({
 				await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
 					headers: {
 						"Content-Type": "application/json",
-						Authorization: `Bearer ${DISCORD_BOT_TOKEN}`,
+						Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
 					},
 				})
 			).json()) as RESTGetAPIGuildResult;

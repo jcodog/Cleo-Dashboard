@@ -42,7 +42,7 @@ const ServerAddNextPage = () => {
 			return await res.json();
 		},
 		refetchInterval: (query) => {
-			return query.state.data?.channels ? false : 60000;
+			return query.state.data?.channels ? false : 10000;
 		},
 	});
 
