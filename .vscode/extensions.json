@@ -12,6 +12,7 @@
 		"willluke.nextjs",
 		"bradlc.vscode-tailwindcss",
 		"alfredbirk.tailwind-documentation",
-		"kalimahapps.tailwindcss-kit"
+		"kalimahapps.tailwindcss-kit",
+		"icrawl.discord-vscode"
 	]
 }
