@@ -3,6 +3,12 @@
 import { Heading } from "@/components/Heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Servers } from "@/prisma/client";
 import { useQuery } from "@tanstack/react-query";
 import { Dispatch, SetStateAction, useState } from "react";
@@ -24,6 +30,7 @@ export const InviteLink = ({
 	);
 
 	const isDisabled = inviteLink === initialInviteLink;
+	const canCreateInvite = !!guild.welcomeChannel;
 
 	return (
 		<div className="flex flex-col flex-1 w-full max-w-2xl gap-4">
@@ -48,15 +55,35 @@ export const InviteLink = ({
 					Or let Cleo make an invite link for your server on your
 					behalf.
 				</p>
-				<Button
-					onClick={(e) => {
-						e.preventDefault();
-						console.log("Making invite link");
-					}}
-					variant="outline"
-				>
-					Create Invite Link
-				</Button>
+				<TooltipProvider>
+					<Tooltip>
+						<TooltipTrigger>
+							<Button
+								onClick={(e) => {
+									e.preventDefault();
+									console.log("Making invite link");
+								}}
+								variant="outline"
+								disabled={!canCreateInvite}
+							>
+								Create Invite Link
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>
+							{canCreateInvite ? (
+								<p>
+									Create an invite to your server welcome
+									channel.
+								</p>
+							) : (
+								<p>
+									You need to set the server welcome channel
+									before Cleo can make a server invite.
+								</p>
+							)}
+						</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
 			</div>
 		</div>
 	);
