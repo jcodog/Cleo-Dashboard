@@ -1,5 +1,6 @@
 "use client";
 
+import { Channels } from "@/components/DashboardTabs/Channels";
 import { General } from "@/components/DashboardTabs/General";
 import { Heading } from "@/components/Heading";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -38,16 +39,20 @@ type Tabs = {
 	component: React.FC<TabProps>;
 };
 
-const ChannelsTab = () => {
-	return <div>Channels</div>;
+const LoggingTab = () => {
+	return (
+		<div className="flex flex-1 items-center justify-center text-center">
+			<p>Nothing here, we aren't ready to give you this tab.</p>
+		</div>
+	);
 };
 
 const IncidentsTab = () => {
-	return <div>Incidents</div>;
-};
-
-const LoggingTab = () => {
-	return <div>Logging</div>;
+	return (
+		<div className="flex flex-1 items-center justify-center text-center">
+			<p>Nothing here, we aren't ready to give you this tab.</p>
+		</div>
+	);
 };
 
 const tabs: Tabs[] = [
@@ -61,13 +66,13 @@ const tabs: Tabs[] = [
 		name: "Channels",
 		value: "channels",
 		disabled: false,
-		component: ChannelsTab,
+		component: Channels,
 	},
 
 	{
 		name: "Logging",
 		value: "logging",
-		disabled: false,
+		disabled: true,
 		component: LoggingTab,
 	},
 	{
