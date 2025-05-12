@@ -161,7 +161,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
 						</div>
 						<Heading>{headerInfo.name}</Heading>
 						<p className="text-muted-foreground font-mono text-sm">
-							headerInfo.description || "No description"
+							{headerInfo.description || "No description"}
 						</p>
 					</div>
 
