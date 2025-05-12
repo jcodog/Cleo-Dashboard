@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Servers } from "@/prisma/client";
 import { useQuery } from "@tanstack/react-query";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
 interface InviteLinkProps {
 	guild: Servers;
@@ -28,6 +28,10 @@ export const InviteLink = ({
 	const [inviteLink, setInviteLink] = useState<string | undefined>(
 		guild.inviteLink || undefined
 	);
+
+	useEffect(() => {
+		setInviteLink(guild.inviteLink || undefined);
+	}, [guild.inviteLink]);
 
 	const isDisabled = inviteLink === initialInviteLink;
 	const canCreateInvite = !!guild.welcomeChannel;

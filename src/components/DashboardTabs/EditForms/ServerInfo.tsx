@@ -28,6 +28,7 @@ export const ServerInfo = ({
 	const initialDescription = apiGuild.description ?? "";
 	const [name, setName] = useState<string>(initialName);
 	const [description, setDescription] = useState<string>(initialDescription);
+
 	const [invite, setInvite] = useState<string | undefined>();
 	const queryClient = useQueryClient();
 
@@ -68,6 +69,11 @@ export const ServerInfo = ({
 			toast.error(error.message);
 		}
 	}, [data, error]);
+
+	useEffect(() => {
+		setName(apiGuild.name || "");
+		setDescription(apiGuild.description ?? "");
+	}, [apiGuild.name, apiGuild.description]);
 
 	const isDisabled =
 		isPending ||
