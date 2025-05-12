@@ -115,6 +115,7 @@ export const discordRouter = j.router({
 		const accessToken = tokens[0].token;
 
 		const response = await fetch("https://discord.com/api/v10/oauth2/@me", {
+			method: "GET",
 			headers: {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${accessToken}`,
@@ -223,6 +224,7 @@ export const discordRouter = j.router({
 		const accessToken = tokens[0].token;
 
 		const response = await fetch("https://discord.com/api/v10/oauth2/@me", {
+			method: "GET",
 			headers: {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${accessToken}`,
@@ -267,6 +269,7 @@ export const discordRouter = j.router({
 		const res = await fetch(
 			`https://discord.com/api/v10/guilds/${onboardingGuild}/channels`,
 			{
+				method: "GET",
 				headers: {
 					"Content-Type": "application/json",
 					Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
@@ -336,6 +339,7 @@ export const discordRouter = j.router({
 			const response = await fetch(
 				"https://discord.com/api/v10/oauth2/@me",
 				{
+					method: "GET",
 					headers: {
 						"Content-Type": "application/json",
 						Authorization: `Bearer ${accessToken}`,
@@ -368,6 +372,7 @@ export const discordRouter = j.router({
 
 			const guild = (await (
 				await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
+					method: "GET",
 					headers: {
 						"Content-Type": "application/json",
 						Authorization: `Bot ${DISCORD_BOT_TOKEN}`,

@@ -67,9 +67,11 @@ model Servers {
   aiEnabled           Boolean  @default(false)
   welcomeChannel      String?
   announcementChannel String?
-  updatesChannel      String
+  updatesChannel      String?
   logsChannel         String?
   logLevel            LogLevel @default(NONE)
+  inviteLink          String?
+  inviteCode          String?
 }
 
 model PremiumSubscriptions {

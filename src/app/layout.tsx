@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/providers/theme";
 import { Toaster } from "@/components/ui/sonner";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { ClerkProvider } from "@/components/providers/clerk";
+import { CookieBanner } from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
 	title: "Cleo",
@@ -19,8 +20,8 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" suppressHydrationWarning>
-			<body className="min-h-screen flex flex-col h-full w-full p-2 antialiased">
+		<html lang="en" className="overflow-hidden" suppressHydrationWarning>
+			<body className="min-w-full min-h-screen flex flex-col h-full w-full p-2 antialiased">
 				<ThemeProvider
 					attribute="class"
 					defaultTheme="system"
@@ -42,6 +43,7 @@ export default function RootLayout({
 									error: <CircleAlert />,
 								}}
 							/>
+							<CookieBanner />
 						</JStackProvider>
 					</ClerkProvider>
 				</ThemeProvider>

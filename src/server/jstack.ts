@@ -4,7 +4,10 @@ import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import { InferMiddlewareOutput, jstack } from "jstack";
 import { createClerkClient, verifyToken } from "@clerk/backend";
-import { RESTGetAPIUserResult } from "discord-api-types/v10";
+import {
+	RESTGetAPIOAuth2CurrentAuthorizationResult,
+	RESTGetAPIUserResult,
+} from "discord-api-types/v10";
 
 interface Env {
 	Bindings: {
@@ -113,11 +116,15 @@ const botMiddleware = j.middleware(async ({ c, ctx, next }) => {
 		});
 	}
 
-	let user = await db.users.findUnique({ where: { discordId } });
+	let user = await db.users.findUnique({
+		where: { discordId },
+		include: { limits: true, premiumSubscriptions: true },
+	});
 
 	if (!user) {
 		const discordUser = (await (
 			await fetch("https://discord.com/api/v10/users/" + discordId, {
+				method: "GET",
 				headers: {
 					"Content-Type": "application/json",
 					Authorization: "Bearer " + DISCORD_BOT_TOKEN,
@@ -137,11 +144,71 @@ const botMiddleware = j.middleware(async ({ c, ctx, next }) => {
 			},
 			include: {
 				limits: true,
+				premiumSubscriptions: true,
 			},
 		});
 	}
 
 	return await next({ user });
+});
+
+const dashMiddleware = j.middleware(async ({ ctx, next }) => {
+	const { db, client, token } = ctx as InferMiddlewareOutput<
+		typeof dbMiddleware
+	> &
+		InferMiddlewareOutput<typeof clerkMiddleware>;
+
+	const auth = await client.sessions.getSession(token.sid);
+	const userId = auth.userId;
+
+	const tokens = (
+		await client.users.getUserOauthAccessToken(userId, "discord")
+	).data;
+
+	if (!tokens || !tokens[0] || !tokens[0].token)
+		throw new HTTPException(401, {
+			message: "Unauthorized: No access token",
+		});
+
+	const accessToken = tokens[0].token;
+
+	const response = await fetch("https://discord.com/api/v10/oauth2/@me", {
+		method: "GET",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${accessToken}`,
+		},
+	});
+
+	if (!response.ok)
+		throw new HTTPException(401, {
+			message: "Unauthorized: Error getting current OAuth2 authorization",
+		});
+
+	const data =
+		(await response.json()) as RESTGetAPIOAuth2CurrentAuthorizationResult;
+
+	if (!data)
+		throw new HTTPException(401, {
+			message: "Unauthorized: No valid OAuth2 Authorization data",
+		});
+
+	const discordId = data.user?.id;
+
+	if (!discordId)
+		throw new HTTPException(401, {
+			message:
+				"Unauthorized: No valid discord ID retrieved from OAuth2 Authorization data",
+		});
+
+	const user = await db.users.findUnique({ where: { discordId } });
+
+	if (!user)
+		throw new HTTPException(401, {
+			message: "Unauthorized: Invalid user or no user in database",
+		});
+
+	return await next({ user, accessToken });
 });
 
 /**
@@ -170,3 +237,4 @@ export const botProcedure = publicProcedure.use(botMiddleware);
  *
  * This is used as the method to accurately link the request to a user record in the database.
  */
+export const dashProcedure = clerkProcedure.use(dashMiddleware);

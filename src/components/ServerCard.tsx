@@ -22,7 +22,7 @@ export const ServerCard = ({
 		<>
 			<Link
 				className="flex md:hidden group relative w-auto aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0 mx-10"
-				href={`/guild/${serverId}`}
+				href={`/dashboard/guild/${serverId}`}
 			>
 				<Image
 					src={imageUrl}
@@ -36,7 +36,7 @@ export const ServerCard = ({
 			</Link>
 			<Link
 				className="hidden md:flex group relative w-full aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0"
-				href={`/guild/${serverId}`}
+				href={`/dashboard/guild/${serverId}`}
 			>
 				<Image
 					src={imageUrl}
