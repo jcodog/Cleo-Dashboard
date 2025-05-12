@@ -34,7 +34,7 @@ export const ServerInfo = ({
 	const { data, isPending, error, mutate } = useMutation({
 		mutationKey: ["modify-guild-info"],
 		mutationFn: async () => {
-			const token = getToken();
+			const token = await getToken();
 			const req = await client.dash.setGuildInfo.$post(
 				{
 					guildId: apiGuild.id,
