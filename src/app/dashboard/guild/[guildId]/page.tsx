@@ -186,11 +186,13 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
 								<li
 									key={tab.value}
 									onClick={() => {
-										const url =
-											tab.value === "overview"
-												? `/dashboard/guild/${guildId}`
-												: `/dashboard/guild/${guildId}?tab=${tab.value}`;
-										confirmLeave(url);
+										if (!tab.disabled) {
+											const url =
+												tab.value === "overview"
+													? `/dashboard/guild/${guildId}`
+													: `/dashboard/guild/${guildId}?tab=${tab.value}`;
+											confirmLeave(url);
+										}
 									}}
 									className={cn(
 										"flex items-center gap-2 justify-between p-2",
