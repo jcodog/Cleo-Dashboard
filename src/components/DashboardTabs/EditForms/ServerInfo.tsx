@@ -1,5 +1,6 @@
 "use client";
 
+import { Heading } from "@/components/Heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { client } from "@/lib/client";
@@ -73,40 +74,43 @@ export const ServerInfo = ({
 		(name === initialName && description === initialDescription);
 
 	return (
-		<form
-			onSubmit={(e) => {
-				e.preventDefault();
-				mutate();
-			}}
-			className="flex flex-1 flex-col gap-6 max-w-2xl items-center justify-center w-full"
-		>
-			<Input
-				value={name}
-				onChange={(e) => {
-					setName(e.target.value);
-					if (e.target.value !== initialName) {
-						setDirtyAction(true);
-					} else {
-						setDirtyAction(false);
-					}
+		<div className="flex flex-col flex-1 w-full max-w-2xl gap-4 justify-center">
+			<Heading className="text-lg">Server information</Heading>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					mutate();
 				}}
-			/>
-			<Input
-				value={description}
-				onChange={(e) => {
-					setDescription(e.target.value);
-					if (e.target.value !== initialDescription) {
-						setDirtyAction(true);
-					} else {
-						setDirtyAction(false);
-					}
-				}}
-			/>
-			<div className="flex w-full items-center justify-end">
-				<Button type="submit" disabled={isDisabled}>
-					{isDisabled ? "No changes" : "Save changes"}
-				</Button>
-			</div>
-		</form>
+				className="flex flex-col gap-6 w-full"
+			>
+				<Input
+					value={name}
+					onChange={(e) => {
+						setName(e.target.value);
+						if (e.target.value !== initialName) {
+							setDirtyAction(true);
+						} else {
+							setDirtyAction(false);
+						}
+					}}
+				/>
+				<Input
+					value={description}
+					onChange={(e) => {
+						setDescription(e.target.value);
+						if (e.target.value !== initialDescription) {
+							setDirtyAction(true);
+						} else {
+							setDirtyAction(false);
+						}
+					}}
+				/>
+				<div className="flex w-full items-center justify-end">
+					<Button type="submit" disabled={isDisabled}>
+						{isDisabled ? "No changes" : "Save changes"}
+					</Button>
+				</div>
+			</form>
+		</div>
 	);
 };
