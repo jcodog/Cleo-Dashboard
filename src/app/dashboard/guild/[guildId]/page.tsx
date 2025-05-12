@@ -190,7 +190,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
 				</div>
 				<div className="flex flex-1">
 					<div className="flex flex-col flex-1 w-56 min-w-56 max-w-56 py-4 gap-2 bg-accent/30 rounded-bl-md justify-between">
-						<ul className="flex flex-col gap-2 px-2">
+						<ul className="flex flex-col gap-2 px-2 select-none">
 							{tabs.map((tab) => (
 								<li
 									key={tab.value}
