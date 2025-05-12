@@ -88,9 +88,18 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
 	const { guildId } = use(params);
 	const { getToken } = useAuth();
 	const searchParams = useSearchParams();
-	const activeTabValue = searchParams.get("tab") || "general";
+	// take tab directly from URL (default to 'overview')
+	const activeTabValue = searchParams.get("tab") || "overview";
+	// always pick a tab, falls back to first
 	const currentTab = tabs.find((t) => t.value === activeTabValue) || tabs[0];
 	const ActiveComponent = currentTab!.component;
+
+	// redirect if the active tab is disabled
+	useEffect(() => {
+		if (currentTab!.disabled) {
+			router.replace(`/dashboard/guild/${guildId}`);
+		}
+	}, [currentTab, guildId, router]);
 
 	// global dirty-state guard
 	const [isDirty, setIsDirty] = useState(false);
