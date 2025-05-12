@@ -138,7 +138,6 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
 			}
 			return json.data;
 		},
-		refetchOnWindowFocus: false,
 	});
 
 	return headerLoading || !headerInfo ? (

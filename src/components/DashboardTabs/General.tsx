@@ -14,7 +14,7 @@ export const General = ({
 	setDirtyAction,
 	getTokenAction,
 }: TabProps) => {
-	const { data, isLoading } = useQuery({
+	const { data, isLoading, isFetching } = useQuery({
 		queryKey: ["get-guild-info"],
 		queryFn: async () => {
 			const token = await getTokenAction();
@@ -29,7 +29,6 @@ export const General = ({
 			}
 			return json.data;
 		},
-		refetchOnWindowFocus: false,
 	});
 
 	return (
