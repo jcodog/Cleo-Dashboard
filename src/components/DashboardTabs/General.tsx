@@ -27,7 +27,16 @@ export const General = ({
 			if (!json.success) {
 				return;
 			}
-			return json.data;
+			const { guild, dbGuild } = json.data;
+			return {
+				guild,
+				dbGuild: {
+					...dbGuild,
+					lastOpened: dbGuild.lastOpened
+						? new Date(dbGuild.lastOpened)
+						: null,
+				},
+			};
 		},
 	});
 
