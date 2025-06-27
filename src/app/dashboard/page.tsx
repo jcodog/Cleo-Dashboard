@@ -25,8 +25,15 @@ const DashboardHomePage = () => {
 	const { data, isLoading } = useQuery({
 		queryKey: ["get-guild-list"],
 		queryFn: async () => {
+			const token = await getToken();
+
 			// fetch sorted guilds from our dashRouter
-			const res = await client.dash.getGuildList.$get();
+			const res = await client.dash.getGuildList.$get(undefined, {
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			});
+
 			return res.json();
 		},
 	});
