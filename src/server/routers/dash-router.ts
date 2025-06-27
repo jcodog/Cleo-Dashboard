@@ -3,6 +3,7 @@ import {
 	RESTGetAPICurrentUserGuildsResult,
 	RESTGetAPIGuildMemberResult,
 	RESTGetAPIGuildResult,
+	RESTGetAPIGuildChannelsResult,
 } from "discord-api-types/v10";
 import { env } from "hono/adapter";
 import { z } from "zod";
@@ -11,6 +12,93 @@ const DISCORD_INVITE_REGEX =
 	/^https:\/\/(?:discord\.gg\/|discord\.com\/invite\/)([A-Za-z0-9_-]{2,32})\/?$/i;
 
 export const dashRouter = j.router({
+	getGuildList: dashProcedure.query(
+		async ({ c, ctx: { db, accessToken } }) => {
+			try {
+				const botToken = env(c).DISCORD_BOT_TOKEN;
+
+				const [userRes, botRes] = await Promise.all([
+					fetch("https://discord.com/api/v10/users/@me/guilds", {
+						headers: {
+							Authorization: `Bearer ${accessToken}`,
+						},
+					}),
+					fetch("https://discord.com/api/v10/users/@me/guilds", {
+						headers: {
+							Authorization: `Bot ${botToken}`,
+						},
+					}),
+				]);
+
+				const [userGuilds, botGuilds] = await Promise.all([
+					userRes.json() as Promise<RESTGetAPICurrentUserGuildsResult>,
+					botRes.json() as Promise<RESTGetAPICurrentUserGuildsResult>,
+				]);
+
+				const MASK = BigInt(8) | BigInt(32); // ADMINISTRATOR | MANAGE_GUILD
+				const shared = userGuilds.filter(
+					(g) =>
+						(BigInt(g.permissions) & MASK) !== BigInt(0) &&
+						botGuilds.some((b) => b.id === g.id)
+				);
+				const sharedIds = shared.map((g) => g.id);
+				if (shared.length === 0) {
+					return c.json({
+						guilds: null,
+						message: "No shared guilds found",
+					});
+				}
+
+				// upsert each shared guild, fetching full guild info to retrieve ownerId
+				await Promise.all(
+					shared.map(async (g) => {
+						const guildRes = await fetch(
+							`https://discord.com/api/v10/guilds/${g.id}`,
+							{ headers: { Authorization: `Bot ${botToken}` } }
+						);
+						const guildData =
+							(await guildRes.json()) as RESTGetAPIGuildResult;
+						return db.servers.upsert({
+							where: { id: guildData.id },
+							create: {
+								id: guildData.id,
+								name: guildData.name,
+								ownerId: guildData.owner_id,
+								icon: guildData.icon,
+							},
+							update: {
+								name: guildData.name,
+								ownerId: guildData.owner_id,
+								icon: guildData.icon,
+							},
+						});
+					})
+				);
+
+				const servers = await db.servers.findMany({
+					where: {
+						id: { in: sharedIds },
+					},
+					orderBy: [
+						{ lastOpened: { sort: "desc", nulls: "last" } },
+						{ name: "asc" },
+					],
+				});
+
+				return c.json({
+					guilds: servers,
+					message: "Retrieved sorted guilds list",
+				});
+			} catch (err: any) {
+				console.error("getGuildList error:", err);
+				return c.json({
+					guilds: null,
+					message: err.message || "Internal error",
+				});
+			}
+		}
+	),
+
 	getHeaderInfo: dashProcedure
 		.input(z.object({ guildId: z.string() }))
 		.query(async ({ c, ctx, input }) => {
@@ -113,6 +201,10 @@ export const dashRouter = j.router({
 
 				const dbGuildData = await db.servers.findUnique({
 					where: { id: guildId },
+					cacheStrategy: {
+						ttl: 30,
+						swr: 60,
+					},
 				});
 
 				let dbGuild;
@@ -122,9 +214,18 @@ export const dashRouter = j.router({
 							id: guildData.id,
 							name: guildData.name,
 							ownerId: guildData.owner_id,
+							lastOpened: new Date(),
 						},
 					});
 				} else {
+					await db.servers.update({
+						where: {
+							id: guildData.id,
+						},
+						data: {
+							lastOpened: new Date(),
+						},
+					});
 					dbGuild = dbGuildData;
 				}
 
@@ -211,6 +312,7 @@ export const dashRouter = j.router({
 	setGuildInvite: dashProcedure
 		.input(
 			z.object({
+				guildId: z.string(),
 				inviteLink: z
 					.string()
 					.url({ message: "Please only provide a valid url." })
@@ -220,23 +322,127 @@ export const dashRouter = j.router({
 					}),
 			})
 		)
-		.mutation(async ({ c, ctx, input }) => {
-			const { inviteLink } = input;
-			const [fullUrl, code] = DISCORD_INVITE_REGEX.exec(inviteLink)!;
+		.mutation(
+			async ({ c, ctx: { db }, input: { guildId, inviteLink } }) => {
+				const [fullUrl, code] = DISCORD_INVITE_REGEX.exec(inviteLink)!;
+				const isDotCom = fullUrl.includes("discord.com/invite");
+				const url = isDotCom
+					? fullUrl
+					: `https://discord.com/invite/${code}`;
 
-			const isDotCom = fullUrl.includes("discord.com/invite");
-			const url = isDotCom
-				? fullUrl
-				: `https://discord.com/invite/${code}`;
+				try {
+					const guild = await db.servers.update({
+						data: { inviteLink: url, inviteCode: code },
+						where: { id: guildId },
+					});
+					return c.json({
+						success: true,
+						data: { guild },
+						message: "Set the invite link",
+					});
+				} catch (err: any) {
+					console.error("Updating db error:", err);
+					return c.json({
+						success: false,
+						error: err.message || "Internal server error",
+					});
+				}
+			}
+		),
 
-			console.log({
-				url,
-				code,
-			});
+	getGuildChannels: dashProcedure
+		.input(z.object({ guildId: z.string() }))
+		.query(async ({ c, ctx: { db, accessToken }, input: { guildId } }) => {
+			const botToken = env(c).DISCORD_BOT_TOKEN;
+			try {
+				// Fetch user guilds to check permissions
+				const userGuildsRes = await fetch(
+					"https://discord.com/api/v10/users/@me/guilds",
+					{
+						headers: {
+							Authorization: `Bearer ${accessToken}`,
+						},
+					}
+				);
+				if (!userGuildsRes.ok) {
+					return c.json({
+						success: false,
+						error: `Failed to fetch user guilds [${userGuildsRes.status}]`,
+					});
+				}
+				const userGuilds =
+					(await userGuildsRes.json()) as RESTGetAPICurrentUserGuildsResult;
+				const hasPerm = userGuilds.some(
+					(g) =>
+						g.id === guildId &&
+						(BigInt(g.permissions) & (BigInt(8) | BigInt(32))) !==
+							BigInt(0)
+				);
+				if (!hasPerm) {
+					return c.json({
+						success: false,
+						noPerm: true,
+						error: "Forbidden - missing required server permissions",
+					});
+				}
 
-			return c.json({
-				success: true,
-				message: "Set the invite link",
-			});
+				// Fetch channels using bot token
+				const channelsRes = await fetch(
+					`https://discord.com/api/v10/guilds/${guildId}/channels`,
+					{
+						headers: {
+							Authorization: `Bot ${botToken}`,
+						},
+					}
+				);
+				if (!channelsRes.ok) {
+					return c.json({
+						success: false,
+						error: `Failed to fetch channels [${channelsRes.status}]`,
+					});
+				}
+				const allChannels =
+					(await channelsRes.json()) as RESTGetAPIGuildChannelsResult;
+
+				// Load server settings from DB
+				const server = await db.servers.findUnique({
+					where: { id: guildId },
+				});
+				if (!server) {
+					return c.json({
+						success: false,
+						error: "Server not found",
+					});
+				}
+
+				// Build channels result for each setting, defaulting to null
+				const result: Record<
+					string,
+					{ id: string; name: string } | null
+				> = {};
+				const settings = [
+					["welcomeChannel", server.welcomeChannel],
+					["announcementChannel", server.announcementChannel],
+					["updatesChannel", server.updatesChannel],
+					["logsChannel", server.logsChannel],
+				] as const;
+				for (const [key, chId] of settings) {
+					if (!chId) {
+						result[key] = null;
+					} else {
+						const ch = allChannels.find((c) => c.id === chId);
+						result[key] =
+							ch && ch.name ? { id: ch.id, name: ch.name } : null;
+					}
+				}
+
+				return c.json({ success: true, data: { channels: result } });
+			} catch (err: any) {
+				console.error("getGuildChannels error:", err);
+				return c.json({
+					success: false,
+					error: err.message || "Internal error",
+				});
+			}
 		}),
 });

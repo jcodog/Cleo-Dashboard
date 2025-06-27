@@ -2,66 +2,32 @@
 
 import { Heading } from "@/components/Heading";
 import { ServerList } from "@/components/ServerList";
+import { Button } from "@/components/ui/button";
 import { client } from "@/lib/client";
+import { Servers } from "@/prisma/client";
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
 import {
 	OAuth2Scopes,
 	RESTGetAPICurrentUserGuildsResult,
 } from "discord-api-types/v10";
-import { CircleCheck, CircleX, Loader } from "lucide-react";
+import { CircleCheck, CircleX, Loader, Plus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const DashboardHomePage = () => {
+	const router = useRouter();
 	const { getToken } = useAuth();
-	const [guilds, setGuilds] =
-		useState<RESTGetAPICurrentUserGuildsResult | null>(null);
+	const [guilds, setGuilds] = useState<Array<Servers> | null>(null);
 	const [isUserInstalled, setIsUserInstalled] = useState(false);
 
 	const { data, isLoading } = useQuery({
-		queryKey: ["get-shared-guilds"],
+		queryKey: ["get-guild-list"],
 		queryFn: async () => {
-			const token = await getToken();
-
-			const userRes = await client.discord.getUserGuilds.$get(undefined, {
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
-			});
-
-			const userData = await userRes.json();
-
-			if (!userData.guilds) {
-				return userData;
-			}
-
-			const botRes = await client.discord.getBotGuilds.$get();
-
-			const botData = await botRes.json();
-
-			if (!botData.guilds) {
-				return botData;
-			}
-
-			const sharedGuilds = userData.guilds.filter(
-				(guild) =>
-					(BigInt(guild.permissions) & (BigInt(8) | BigInt(32))) !==
-						BigInt(0) &&
-					botData.guilds.some((botGuild) => botGuild.id === guild.id)
-			);
-
-			if (!sharedGuilds || sharedGuilds.length < 1) {
-				return {
-					guilds: null,
-					message: "No guilds shared between the bot and user",
-				};
-			}
-
-			return {
-				guilds: sharedGuilds,
-				message: "Retrieved shared guilds",
-			};
+			// fetch sorted guilds from our dashRouter
+			const res = await client.dash.getGuildList.$get();
+			return res.json();
 		},
 	});
 
@@ -82,7 +48,14 @@ const DashboardHomePage = () => {
 
 	useEffect(() => {
 		if (data && data.guilds) {
-			setGuilds(data.guilds);
+			setGuilds(
+				data.guilds.map((server) => ({
+					...server,
+					lastOpened: server.lastOpened
+						? new Date(server.lastOpened)
+						: null,
+				}))
+			);
 		}
 	}, [data]);
 
@@ -124,7 +97,6 @@ const DashboardHomePage = () => {
 							</>
 						)}
 					</div>
-					// Make this a nice little component that displayes if the user has cleo added to their account as a user installable app instead of just plain text
 				)}
 			</div>
 
@@ -135,7 +107,24 @@ const DashboardHomePage = () => {
 				) : guilds ? (
 					<ServerList servers={guilds} />
 				) : (
-					<p>No shared guilds</p>
+					<div className="flex flex-1 flex-col items-center justify-center p-2 gap-2">
+						<p>
+							You have no servers, how about we add your first
+							one?
+						</p>
+						<div className="flex flex-1 items-center justify-center p-6">
+							<Button
+								variant="secondary"
+								className="size-20"
+								onClick={(e) => {
+									e.preventDefault();
+									router.push("/add/server");
+								}}
+							>
+								<Plus className="size-4" />
+							</Button>
+						</div>
+					</div>
 				)}
 			</div>
 		</section>

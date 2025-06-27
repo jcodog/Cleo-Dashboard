@@ -1,7 +1,7 @@
 "use client";
 
 import { Heading } from "@/components/Heading";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
 	Tooltip,
@@ -9,9 +9,12 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { client } from "@/lib/client";
 import { Servers } from "@/prisma/client";
-import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface InviteLinkProps {
 	guild: Servers;
@@ -24,10 +27,34 @@ export const InviteLink = ({
 	isDirty,
 	setDirtyAction,
 }: InviteLinkProps) => {
+	const { getToken } = useAuth();
 	const initialInviteLink = guild.inviteLink || undefined;
 	const [inviteLink, setInviteLink] = useState<string | undefined>(
 		guild.inviteLink || undefined
 	);
+
+	const {} = useMutation({
+		mutationKey: ["set-invite-link"],
+		mutationFn: async () => {
+			const token = await getToken();
+			const res = await client.dash.setGuildInvite.$post(
+				{ guildId: guild.id, inviteLink: inviteLink! },
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+			const json = await res.json();
+			if (!json.success) {
+				toast.error(json.error || "Error setting invite link");
+				return;
+			}
+
+			toast.success(json.message);
+			return json.data;
+		},
+	});
 
 	useEffect(() => {
 		setInviteLink(guild.inviteLink || undefined);
@@ -61,30 +88,24 @@ export const InviteLink = ({
 				</p>
 				<TooltipProvider>
 					<Tooltip>
-						<TooltipTrigger>
-							<Button
-								onClick={(e) => {
-									e.preventDefault();
-									console.log("Making invite link");
-								}}
-								variant="outline"
-								disabled={!canCreateInvite}
-							>
-								Create Invite Link
-							</Button>
+						<TooltipTrigger asChild>
+							<span tabIndex={0}>
+								<Button
+									variant="outline"
+									disabled={!canCreateInvite}
+									onClick={(e) => {
+										e.preventDefault();
+										console.log("Making invite");
+									}}
+								>
+									Create invite
+								</Button>
+							</span>
 						</TooltipTrigger>
-						<TooltipContent>
-							{canCreateInvite ? (
-								<p>
-									Create an invite to your server welcome
-									channel.
-								</p>
-							) : (
-								<p>
-									You need to set the server welcome channel
-									before Cleo can make a server invite.
-								</p>
-							)}
+						<TooltipContent side="top">
+							{canCreateInvite
+								? "Create and invite to your server welcome channel."
+								: "You need to set up the welcome channel before Cleo can make an invite to your server."}
 						</TooltipContent>
 					</Tooltip>
 				</TooltipProvider>

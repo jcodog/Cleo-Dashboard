@@ -3,6 +3,7 @@ const nextConfig = {
 	devIndicators: {
 		position: "bottom-right",
 	},
+	poweredByHeader: false,
 	images: {
 		remotePatterns: [
 			new URL("https://cdn.discordapp.com/**"),

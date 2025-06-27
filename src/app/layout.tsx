@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en" className="overflow-hidden" suppressHydrationWarning>
-			<body className="min-w-full min-h-screen flex flex-col h-full w-full p-2 antialiased">
+			<body className="min-w-full min-h-screen flex flex-col h-full w-full antialiased">
 				<ThemeProvider
 					attribute="class"
 					defaultTheme="system"

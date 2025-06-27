@@ -7,7 +7,7 @@ const AddLayout = ({
 		<>
 			{/* navbar */}
 			{/* sidebar? */}
-			<main className="flex flex-1 flex-col items-center justify-center">
+			<main className="flex flex-1 flex-col items-center justify-center p-2">
 				{children}
 			</main>
 		</>
