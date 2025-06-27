@@ -9,6 +9,87 @@ import { env } from "hono/adapter";
 import { z } from "zod";
 
 export const discordRouter = j.router({
+	getUserGuilds: clerkProcedure.query(async ({ c, ctx }) => {
+		const { client, token } = ctx;
+
+		const auth = await client.sessions.getSession(token.sid);
+		const userId = auth.userId;
+
+		const tokens = (
+			await client.users.getUserOauthAccessToken(userId, "discord")
+		).data;
+
+		if (!tokens)
+			return c.json({
+				guilds: null,
+				message: "No connected discord accounts for the user",
+			});
+
+		if (!tokens[0] || !tokens[0].token)
+			return c.json({
+				guilds: null,
+				message: "No access token for the user",
+			});
+
+		const accessToken = tokens[0].token;
+
+		const response = await fetch(
+			"https://discord.com/api/v10/users/@me/guilds",
+			{
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}`,
+				},
+			}
+		);
+
+		if (!response.ok)
+			return c.json({ guilds: null, message: response.statusText });
+
+		const guilds =
+			(await response.json()) as RESTGetAPICurrentUserGuildsResult;
+
+		if (!guilds || guilds.length < 1)
+			return c.json({
+				guilds: null,
+				message: "No guilds found for user",
+			});
+
+		return c.json({ guilds, message: "Retrieved guilds" });
+	}),
+
+	getBotGuilds: publicProcedure.query(async ({ c, input }) => {
+		const { DISCORD_BOT_TOKEN } = env(c);
+		const response = await fetch(
+			"https://discord.com/api/v10/users/@me/guilds",
+			{
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
+				},
+			}
+		);
+
+		if (!response.ok)
+			return c.json({ guilds: null, message: response.statusText });
+
+		const botGuilds =
+			(await response.json()) as RESTGetAPICurrentUserGuildsResult;
+
+		if (!botGuilds || botGuilds.length < 1)
+			return c.json({
+				guilds: null,
+				message: "No guilds found for the bot",
+			});
+
+		return c.json({
+			guilds: botGuilds,
+			message: "Retrieved shared guilds",
+		});
+	}),
+
 	getOauth2Data: clerkProcedure.query(async ({ c, ctx }) => {
 		const { client, token } = ctx;
 
