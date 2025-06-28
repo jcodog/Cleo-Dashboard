@@ -1,4 +1,5 @@
 import { TabProps } from "@/app/dashboard/guild/[guildId]/page";
+import { ChannelItem } from "@/components/DashboardTabs/EditForms/ChannelItem";
 import { Heading } from "@/components/Heading";
 import { client } from "@/lib/client";
 import { useQuery } from "@tanstack/react-query";
@@ -94,94 +95,42 @@ export const Channels = ({ guildId, getTokenAction }: TabProps) => {
 					<p>Loading channels...</p>
 				) : (
 					<ul className="flex flex-col gap-2">
-						<li className="p-2 border rounded flex justify-between items-center">
-							<div className="flex gap-2">
-								<h4 className="font-semibold text-lg">
-									{channelLabels["welcomeChannel"]}
-								</h4>
-								{welcomeChannel.name ? (
-									<div className="flex gap-1.5 items-center">
-										<p className="text-md">
-											{welcomeChannel.name}
-										</p>
-										<p className="text-muted-foreground text-xs">
-											({welcomeChannel.id})
-										</p>
-									</div>
-								) : (
-									<span className="text-muted-foreground italic">
-										{" "}
-										Set a channel
-									</span>
-								)}
-							</div>
-						</li>
-						<li className="p-2 border rounded flex justify-between items-center">
-							<div className="flex gap-2">
-								<h4 className="font-semibold text-lg">
-									{channelLabels["announcementChannel"]}
-								</h4>
-								{announcementChannel.name ? (
-									<div className="flex gap-1.5 items-center">
-										<p className="text-md">
-											{announcementChannel.name}
-										</p>
-										<p className="text-muted-foreground text-xs">
-											({announcementChannel.id})
-										</p>
-									</div>
-								) : (
-									<span className="text-muted-foreground italic">
-										{" "}
-										Set a channel
-									</span>
-								)}
-							</div>
-						</li>
-						<li className="p-2 border rounded flex justify-between items-center">
-							<div className="flex gap-2">
-								<h4 className="font-semibold text-lg">
-									{channelLabels["updatesChannel"]}
-								</h4>
-								{updatesChannel.name ? (
-									<div className="flex gap-1.5 items-center">
-										<p className="text-md">
-											{updatesChannel.name}
-										</p>
-										<p className="text-muted-foreground text-xs">
-											({updatesChannel.id})
-										</p>
-									</div>
-								) : (
-									<span className="text-muted-foreground italic">
-										{" "}
-										Set a channel
-									</span>
-								)}
-							</div>
-						</li>
-						<li className="p-2 border rounded flex justify-between items-center">
-							<div className="flex gap-2">
-								<h4 className="font-semibold text-lg">
-									{channelLabels["logsChannel"]}
-								</h4>
-								{logsChannel.name ? (
-									<div className="flex gap-1.5 items-center">
-										<p className="text-md">
-											{logsChannel.name}
-										</p>
-										<p className="text-muted-foreground text-xs">
-											({logsChannel.id})
-										</p>
-									</div>
-								) : (
-									<span className="text-muted-foreground italic">
-										{" "}
-										Set a channel
-									</span>
-								)}
-							</div>
-						</li>
+						<ChannelItem
+							settingName={channelLabels.welcomeChannel!}
+							channelName={welcomeChannel.name}
+							channelId={welcomeChannel.id}
+							type="welcome"
+							allChannels={
+								data?.success ? data.data.allChannels : null
+							}
+						/>
+						<ChannelItem
+							settingName={channelLabels.announcementChannel!}
+							channelName={announcementChannel.name}
+							channelId={announcementChannel.id}
+							type="announcement"
+							allChannels={
+								data?.success ? data.data.allChannels : null
+							}
+						/>
+						<ChannelItem
+							settingName={channelLabels.updatesChannel!}
+							channelName={updatesChannel.name}
+							channelId={updatesChannel.id}
+							type="updates"
+							allChannels={
+								data?.success ? data.data.allChannels : null
+							}
+						/>
+						<ChannelItem
+							settingName={channelLabels.logsChannel!}
+							channelName={logsChannel.name}
+							channelId={logsChannel.id}
+							type="logs"
+							allChannels={
+								data?.success ? data.data.allChannels : null
+							}
+						/>
 					</ul>
 				)}
 			</section>
