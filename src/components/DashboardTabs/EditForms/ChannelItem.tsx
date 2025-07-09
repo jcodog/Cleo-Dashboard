@@ -8,10 +8,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { client } from "@/lib/client";
+import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "@tanstack/react-query";
 import { RESTGetAPIGuildChannelsResult } from "discord-api-types/v10";
 import { Pen, Save, Trash } from "lucide-react";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export const ChannelItem = ({
 	settingName,
@@ -34,12 +37,32 @@ export const ChannelItem = ({
 
 	const { mutate } = useMutation({
 		mutationKey: [`save-${type}-channel`],
-		mutationFn: async () => {},
+		mutationFn: async () => {
+			const { getToken } = useAuth();
+			const token = await getToken();
+			const res = await client.dash.setChannel.$post(
+				{ guildId: "1", type, channelId: channel.id! },
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+
+			const data = await res.json();
+
+			if (data.success) {
+				setEditing(false);
+				return;
+			}
+
+			toast.error(data.error);
+			return;
+		},
 	});
 
 	const handleSave = async () => {
 		mutate();
-		setEditing(false);
 		return;
 	};
 

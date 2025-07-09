@@ -493,4 +493,109 @@ export const dashRouter = j.router({
 				});
 			}
 		}),
+
+	setChannel: dashProcedure
+		.input(
+			z.object({
+				guildId: z.string(),
+				type: z.enum(["welcome", "announcement", "updates", "logs"]),
+				channelId: z.string(),
+			})
+		)
+		.mutation(
+			async ({ c, ctx: { db }, input: { guildId, type, channelId } }) => {
+				const server = await db.servers.findUnique({
+					where: {
+						id: guildId,
+					},
+				});
+
+				if (!server)
+					return c.json({
+						success: false,
+						error: "Server doesn't exist",
+					});
+
+				if (type === "welcome") {
+					const updatedServer = await db.servers.update({
+						data: {
+							welcomeChannel: channelId,
+						},
+						where: {
+							id: guildId,
+						},
+					});
+
+					if (!updatedServer)
+						return c.json({
+							success: false,
+							error: "Failed to update welcome channel",
+						});
+
+					return c.json({ success: true });
+				}
+
+				if (type === "announcement") {
+					const updatedServer = await db.servers.update({
+						data: {
+							announcementChannel: channelId,
+						},
+						where: {
+							id: guildId,
+						},
+					});
+
+					if (!updatedServer)
+						return c.json({
+							success: false,
+							error: "Failed to update announcement channel",
+						});
+
+					return c.json({ success: true });
+				}
+
+				if (type === "updates") {
+					const updatedServer = await db.servers.update({
+						data: {
+							updatesChannel: channelId,
+						},
+						where: {
+							id: guildId,
+						},
+					});
+
+					if (!updatedServer)
+						return c.json({
+							success: false,
+							error: "Failed to update updates channel",
+						});
+
+					return c.json({ success: true });
+				}
+
+				if (type === "logs") {
+					const updatedServer = await db.servers.update({
+						data: {
+							logsChannel: channelId,
+						},
+						where: {
+							id: guildId,
+						},
+					});
+
+					if (!updatedServer)
+						return c.json({
+							success: false,
+							error: "Failed to update logs channel",
+						});
+
+					return c.json({ success: true });
+				}
+
+				return c.json({
+					success: false,
+					error: "Invalid channel type",
+				});
+			}
+		),
 });
