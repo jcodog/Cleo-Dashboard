@@ -103,6 +103,7 @@ export const Channels = ({ guildId, getTokenAction }: TabProps) => {
 							allChannels={
 								data?.success ? data.data.allChannels : null
 							}
+							guildId={guildId}
 						/>
 						<ChannelItem
 							settingName={channelLabels.announcementChannel!}
@@ -112,6 +113,7 @@ export const Channels = ({ guildId, getTokenAction }: TabProps) => {
 							allChannels={
 								data?.success ? data.data.allChannels : null
 							}
+							guildId={guildId}
 						/>
 						<ChannelItem
 							settingName={channelLabels.updatesChannel!}
@@ -121,6 +123,7 @@ export const Channels = ({ guildId, getTokenAction }: TabProps) => {
 							allChannels={
 								data?.success ? data.data.allChannels : null
 							}
+							guildId={guildId}
 						/>
 						<ChannelItem
 							settingName={channelLabels.logsChannel!}
@@ -130,6 +133,7 @@ export const Channels = ({ guildId, getTokenAction }: TabProps) => {
 							allChannels={
 								data?.success ? data.data.allChannels : null
 							}
+							guildId={guildId}
 						/>
 					</ul>
 				)}

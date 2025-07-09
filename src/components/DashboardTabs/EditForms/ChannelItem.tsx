@@ -22,12 +22,14 @@ export const ChannelItem = ({
 	channelId,
 	type,
 	allChannels,
+	guildId,
 }: {
 	settingName: string;
 	channelName: string | null;
 	channelId: string | null;
 	type: "welcome" | "announcement" | "updates" | "logs";
 	allChannels?: RESTGetAPIGuildChannelsResult | null;
+	guildId: string;
 }) => {
 	const { getToken } = useAuth();
 	const [editing, setEditing] = useState<boolean>(false);
@@ -42,7 +44,7 @@ export const ChannelItem = ({
 		mutationFn: async () => {
 			const token = await getToken();
 			const res = await client.dash.setChannel.$post(
-				{ guildId: "1", type, channelId: channel.id! },
+				{ guildId: guildId, type, channelId: channel.id! },
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
