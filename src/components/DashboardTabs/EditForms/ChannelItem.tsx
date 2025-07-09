@@ -29,6 +29,7 @@ export const ChannelItem = ({
 	type: "welcome" | "announcement" | "updates" | "logs";
 	allChannels?: RESTGetAPIGuildChannelsResult | null;
 }) => {
+	const { getToken } = useAuth();
 	const [editing, setEditing] = useState<boolean>(false);
 	const [channel, setChannel] = useState<{
 		name: string | null;
@@ -39,7 +40,6 @@ export const ChannelItem = ({
 	const { mutate } = useMutation({
 		mutationKey: [`save-${type}-channel`],
 		mutationFn: async () => {
-			const { getToken } = useAuth();
 			const token = await getToken();
 			const res = await client.dash.setChannel.$post(
 				{ guildId: "1", type, channelId: channel.id! },
@@ -75,7 +75,19 @@ export const ChannelItem = ({
 			</div>
 			<div className="flex h-full w-xl p-2">
 				{editing ? (
-					<Select disabled={!allChannels}>
+					<Select
+						onValueChange={(value) => {
+							const selectedChannel = allChannels?.filter(
+								(c) => c.id === value
+							)[0]!;
+
+							setChannel({
+								name: selectedChannel.name,
+								id: selectedChannel.id,
+							});
+						}}
+						disabled={!allChannels}
+					>
 						<SelectTrigger>
 							<SelectValue placeholder="Set a channel" />
 						</SelectTrigger>
