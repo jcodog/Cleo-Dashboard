@@ -11,7 +11,16 @@ import { z } from "zod";
 const DISCORD_INVITE_REGEX =
 	/^https:\/\/(?:discord\.gg\/|discord\.com\/invite\/)([A-Za-z0-9_-]{2,32})\/?$/i;
 
+/**
+ * Router for dashboard procedures related to Discord guild management.
+ */
 export const dashRouter = j.router({
+	/**
+	 * Retrieves the list of Discord guilds shared between the user and the bot
+	 * where the user has ADMINISTRATOR or MANAGE_GUILD permissions.
+	 * Upserts guild info in the database and returns sorted guild entries.
+	 * @returns JSON response with `guilds` array or null and a message.
+	 */
 	getGuildList: dashProcedure.query(
 		async ({ c, ctx: { db, accessToken } }) => {
 			try {
@@ -99,6 +108,12 @@ export const dashRouter = j.router({
 		}
 	),
 
+	/**
+	 * Fetches basic information (name, description, icon) for a specified guild.
+	 * First verifies the user has MANAGE_GUILD or ADMINISTRATOR permissions.
+	 * @param input.guildId - The ID of the guild to fetch header info for.
+	 * @returns JSON response with `success`, `data` (name, description, icon), or `noPerm`/`error`.
+	 */
 	getHeaderInfo: dashProcedure
 		.input(z.object({ guildId: z.string() }))
 		.query(async ({ c, ctx, input }) => {
@@ -178,6 +193,12 @@ export const dashRouter = j.router({
 			}
 		}),
 
+	/**
+	 * Retrieves full guild details and synchronizes last opened time in the database.
+	 * Fetches guild info via bot token with `with_counts` and upserts/updates DB.
+	 * @param input.guildId - The ID of the guild to fetch.
+	 * @returns JSON response with `success`, `data` containing `guild` and `dbGuild`, or `error`.
+	 */
 	getGuildInfo: dashProcedure
 		.input(z.object({ guildId: z.string() }))
 		.query(async ({ c, ctx: { db }, input: { guildId } }) => {
@@ -245,6 +266,16 @@ export const dashRouter = j.router({
 			}
 		}),
 
+	/**
+	 * Updates guild settings (name, description) on Discord if they differ from initial values.
+	 * Sends a PATCH request with changed fields and logs an audit reason.
+	 * @param input.guildId - The ID of the guild to update.
+	 * @param input.name - New guild name.
+	 * @param input.description - New guild description.
+	 * @param input.initialName - Original guild name for change detection.
+	 * @param input.initialDescription - Original guild description for change detection.
+	 * @returns JSON response with `success` or `error`.
+	 */
 	setGuildInfo: dashProcedure
 		.input(
 			z.object({
@@ -309,6 +340,13 @@ export const dashRouter = j.router({
 			}
 		),
 
+	/**
+	 * Validates and sets a new invite link for a guild in the database.
+	 * Parses invite code from URL, normalizes the invite link, and updates the DB record.
+	 * @param input.guildId - The ID of the guild to update.
+	 * @param input.inviteLink - Discord invite URL to set.
+	 * @returns JSON response with `success`, updated `data.guild`, or `error`.
+	 */
 	setGuildInvite: dashProcedure
 		.input(
 			z.object({
@@ -350,6 +388,13 @@ export const dashRouter = j.router({
 			}
 		),
 
+	/**
+	 * Retrieves channel settings for a guild, verifying user permissions and fetching
+	 * channel list via bot token. Maps configured channels (welcome, announcement,
+	 * updates, logs) from DB to channel id/name or null if missing.
+	 * @param input.guildId - The ID of the guild to fetch channels for.
+	 * @returns JSON response with `success` and `data.channels` or `error`/`noPerm`.
+	 */
 	getGuildChannels: dashProcedure
 		.input(z.object({ guildId: z.string() }))
 		.query(async ({ c, ctx: { db, accessToken }, input: { guildId } }) => {
@@ -436,7 +481,10 @@ export const dashRouter = j.router({
 					}
 				}
 
-				return c.json({ success: true, data: { channels: result } });
+				return c.json({
+					success: true,
+					data: { channels: result, allChannels },
+				});
 			} catch (err: any) {
 				console.error("getGuildChannels error:", err);
 				return c.json({
@@ -445,4 +493,109 @@ export const dashRouter = j.router({
 				});
 			}
 		}),
+
+	setChannel: dashProcedure
+		.input(
+			z.object({
+				guildId: z.string(),
+				type: z.enum(["welcome", "announcement", "updates", "logs"]),
+				channelId: z.string(),
+			})
+		)
+		.mutation(
+			async ({ c, ctx: { db }, input: { guildId, type, channelId } }) => {
+				const server = await db.servers.findUnique({
+					where: {
+						id: guildId,
+					},
+				});
+
+				if (!server)
+					return c.json({
+						success: false,
+						error: "Server doesn't exist",
+					});
+
+				if (type === "welcome") {
+					const updatedServer = await db.servers.update({
+						data: {
+							welcomeChannel: channelId,
+						},
+						where: {
+							id: guildId,
+						},
+					});
+
+					if (!updatedServer)
+						return c.json({
+							success: false,
+							error: "Failed to update welcome channel",
+						});
+
+					return c.json({ success: true });
+				}
+
+				if (type === "announcement") {
+					const updatedServer = await db.servers.update({
+						data: {
+							announcementChannel: channelId,
+						},
+						where: {
+							id: guildId,
+						},
+					});
+
+					if (!updatedServer)
+						return c.json({
+							success: false,
+							error: "Failed to update announcement channel",
+						});
+
+					return c.json({ success: true });
+				}
+
+				if (type === "updates") {
+					const updatedServer = await db.servers.update({
+						data: {
+							updatesChannel: channelId,
+						},
+						where: {
+							id: guildId,
+						},
+					});
+
+					if (!updatedServer)
+						return c.json({
+							success: false,
+							error: "Failed to update updates channel",
+						});
+
+					return c.json({ success: true });
+				}
+
+				if (type === "logs") {
+					const updatedServer = await db.servers.update({
+						data: {
+							logsChannel: channelId,
+						},
+						where: {
+							id: guildId,
+						},
+					});
+
+					if (!updatedServer)
+						return c.json({
+							success: false,
+							error: "Failed to update logs channel",
+						});
+
+					return c.json({ success: true });
+				}
+
+				return c.json({
+					success: false,
+					error: "Invalid channel type",
+				});
+			}
+		),
 });
