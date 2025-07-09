@@ -34,6 +34,7 @@ export const ChannelItem = ({
 		name: string | null;
 		id: string | null;
 	}>({ name: channelName, id: channelId });
+	const [saving, setSaving] = useState<boolean>(false);
 
 	const { mutate } = useMutation({
 		mutationKey: [`save-${type}-channel`],
@@ -52,6 +53,7 @@ export const ChannelItem = ({
 			const data = await res.json();
 
 			if (data.success) {
+				setSaving(false);
 				setEditing(false);
 				return;
 			}
@@ -60,11 +62,6 @@ export const ChannelItem = ({
 			return;
 		},
 	});
-
-	const handleSave = async () => {
-		mutate();
-		return;
-	};
 
 	// Sync local channel state when props change
 	useEffect(() => {
@@ -115,7 +112,11 @@ export const ChannelItem = ({
 						variant="default"
 						size="icon"
 						className="cursor-pointer"
-						onClick={handleSave}
+						onClick={() => {
+							setSaving(true);
+							mutate();
+						}}
+						disabled={saving}
 					>
 						<Save className="size-4" />
 					</Button>
