@@ -14,7 +14,7 @@ export default async function Home() {
 				How about we start your journey using Cleo the best way
 				possible?
 			</p>
-   <p>Cleo v3 coming soon.</p>
+			<p className="tracking-tight text-pretty text-md text-center">Cleo v3 coming soon.</p>
 			<div className="flex gap-2">
 				<SignedOut>
 					<SignUpButton>
