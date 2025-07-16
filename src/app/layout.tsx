@@ -14,10 +14,6 @@ export const metadata: Metadata = {
 	metadataBase: new URL(
 		process.env.NEXT_PUBLIC_BASE_URL ?? "https://cleoai.cloud"
 	),
-	themeColor: [
-		{ media: "(prefers-color-scheme: light)", color: "white" },
-		{ media: "(prefers-color-scheme: dark)", color: "black" },
-	],
 	manifest: "/site.webmanifest",
 	icons: {
 		icon: "/favicon.ico",

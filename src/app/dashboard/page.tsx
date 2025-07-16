@@ -13,6 +13,11 @@ import {
 } from "discord-api-types/v10";
 import { CircleCheck, CircleX, Loader, Plus } from "lucide-react";
 import Link from "next/link";
+import {
+	Tooltip,
+	TooltipTrigger,
+	TooltipContent,
+} from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -79,61 +84,77 @@ const DashboardHomePage = () => {
 	}, [oauth2Data]);
 
 	return (
-		<section className="flex flex-1 flex-col items-center justify-center gap-4">
-			<Heading>Dashboard Home</Heading>
+		<section className="container mx-auto p-6 flex flex-col items-center gap-8">
+			<header className="w-full flex items-center justify-between mb-8">
+				<Heading>Dashboard</Heading>
+				<div className="flex items-center gap-4">
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<div className="p-1 rounded-full hover:bg-gray-200/10 cursor-pointer">
+								{isOauth2DataLoading ? (
+									<Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+								) : isUserInstalled ? (
+									<CircleCheck className="h-5 w-5 text-green-400" />
+								) : (
+									<Link href="/add">
+										<CircleX className="h-5 w-5 text-red-400" />
+									</Link>
+								)}
+							</div>
+						</TooltipTrigger>
+						<TooltipContent side="bottom">
+							{isOauth2DataLoading
+								? "Checking installation status..."
+								: isUserInstalled
+								? "Cleo is installed on your account and usable in any server or DM that supports external apps"
+								: "Cleo is not installed. Click to install Cleo on your account."}
+						</TooltipContent>
+					</Tooltip>
+					<UserButton showName />
+				</div>
+			</header>
 
-			<UserButton showName />
-
-			<div className="flex gap-2 text-pretty text-md items-center justify-center">
-				<p>User installed:</p>
-				{isOauth2DataLoading ? (
-					<Loader className="size-6 animate-spin" />
-				) : (
-					<div className="flex gap-2 text-pretty text-md items-center justify-center">
-						{isUserInstalled ? (
-							<>
-								<CircleCheck className="size-6 text-green-500" />
-								<span>You can use Cleo anywhere.</span>
-							</>
-						) : (
-							<>
-								<CircleX className="size-6 text-red-500" />
-								<Link href="/add">
-									Add Cleo to your account.
-								</Link>
-							</>
-						)}
-					</div>
-				)}
-			</div>
-
-			<div className="flex flex-col gap-2 w-full items-center justify-center">
-				<p className="text-pretty text-md font-semibold">Servers</p>
+			<section className="w-full max-w-4xl flex flex-col gap-6">
+				<div className="flex items-center justify-between">
+					<h2 className="text-2xl font-bold">Your Servers</h2>
+					<Button
+						variant="ghost"
+						className="flex items-center gap-2 cursor-pointer"
+						onClick={() => router.push("/add/server")}
+					>
+						<Plus className="h-5 w-5" />
+						Add Server
+					</Button>
+				</div>
 				{isLoading ? (
-					<Loader className="size-6 animate-spin" />
-				) : guilds ? (
+					<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+						{Array.from({ length: 8 }).map((_, i) => (
+							<div
+								key={i}
+								className="aspect-square bg-gray-700 rounded-lg animate-pulse"
+							/>
+						))}
+					</div>
+				) : guilds && guilds.length > 0 ? (
 					<ServerList servers={guilds} />
 				) : (
-					<div className="flex flex-1 flex-col items-center justify-center p-2 gap-2">
+					<div className="flex flex-col items-center justify-center p-4 gap-4">
 						<p>
-							You have no servers, how about we add your first
-							one?
+							You have no servers yet. Let's add your first one!
 						</p>
-						<div className="flex flex-1 items-center justify-center p-6">
-							<Button
-								variant="secondary"
-								className="size-20"
-								onClick={(e) => {
-									e.preventDefault();
-									router.push("/add/server");
-								}}
-							>
-								<Plus className="size-4" />
-							</Button>
-						</div>
+						<Button
+							variant="secondary"
+							className="h-20 w-20"
+							onClick={(e) => {
+								e.preventDefault();
+								router.push("/add/server");
+							}}
+						>
+							<Plus className="h-6 w-6" />
+						</Button>
 					</div>
 				)}
-			</div>
+			</section>
 		</section>
 	);
 };
