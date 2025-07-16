@@ -9,9 +9,52 @@ import { ClerkProvider } from "@/components/providers/clerk";
 import { CookieBanner } from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
-	title: "Cleo",
+	title: { default: "Cleo", template: "%s | Cleo" },
 	description: "The official Cleo dashboard",
-	icons: [{ rel: "icon", url: "/favicon.ico" }],
+	metadataBase: new URL(
+		process.env.NEXT_PUBLIC_BASE_URL ?? "https://cleoai.cloud"
+	),
+	themeColor: [
+		{ media: "(prefers-color-scheme: light)", color: "white" },
+		{ media: "(prefers-color-scheme: dark)", color: "black" },
+	],
+	manifest: "/site.webmanifest",
+	icons: {
+		icon: "/favicon.ico",
+		shortcut: "/favicon-32x32.png",
+		apple: "/apple-touch-icon.png",
+		other: [
+			{
+				rel: "mask-icon",
+				url: "/safari-pinned-tab.svg",
+				color: "#5bbad5",
+			},
+		],
+	},
+	appleWebApp: { capable: true, title: "Cleo", statusBarStyle: "default" },
+	openGraph: {
+		title: "Cleo Dashboard",
+		description: "The official Cleo dashboard",
+		url: "https://cleoai.cloud",
+		siteName: "Cleo",
+		type: "website",
+		locale: "en_GB",
+		images: [
+			{
+				url: "https://cleoai.cloud/android-chrome-512x512.png",
+				width: 512,
+				height: 512,
+				alt: "Cleo Dashboard",
+			},
+		],
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "Cleo Dashboard",
+		description: "The official Cleo dashboard",
+		creator: "@Cleo",
+		images: ["https://cleoai.cloud/android-chrome-512x512.png"],
+	},
 };
 
 export default function RootLayout({
