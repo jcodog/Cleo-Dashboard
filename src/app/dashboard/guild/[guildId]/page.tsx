@@ -154,6 +154,13 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
 		},
 	});
 
+	// dynamically update document title with server name
+	useEffect(() => {
+		if (headerInfo && headerInfo.name) {
+			document.title = `${headerInfo.name} | Cleo`;
+		}
+	}, [headerInfo]);
+
 	return headerLoading || !headerInfo ? (
 		<section className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
 			<Loader className="size-10 animate-spin" />

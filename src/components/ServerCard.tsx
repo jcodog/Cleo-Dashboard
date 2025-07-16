@@ -5,13 +5,19 @@ interface ServerCardProps {
 	serverName: string;
 	serverId: string;
 	serverImage: string | null;
+	isRecent?: boolean;
 }
 
 export const ServerCard = ({
 	serverName,
 	serverId,
 	serverImage,
+	isRecent = false,
 }: ServerCardProps) => {
+	// highlight recent server
+	const recentClass = isRecent
+		? "ring-4 ring-indigo-500 ring-offset-2 ring-offset-background"
+		: "";
 	const imageUrl = serverImage
 		? `https://cdn.discordapp.com/icons/${serverId}/${serverImage}.${
 				serverImage.startsWith("a_") ? "gif" : "png"
@@ -21,9 +27,14 @@ export const ServerCard = ({
 	return (
 		<>
 			<Link
-				className="flex md:hidden group relative w-auto aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0 mx-10"
 				href={`/dashboard/guild/${serverId}`}
+				className={`flex md:hidden group relative w-auto aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0 mx-10 ${recentClass}`}
 			>
+				{isRecent && (
+					<span className="absolute top-2 left-2 bg-indigo-600 text-white text-xs font-semibold px-2 py-0.5 rounded-md z-20">
+						Recently viewed
+					</span>
+				)}
 				<Image
 					src={imageUrl}
 					alt={`${serverName}'s icon`}
@@ -35,9 +46,14 @@ export const ServerCard = ({
 				</p>
 			</Link>
 			<Link
-				className="hidden md:flex group relative w-full aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0"
 				href={`/dashboard/guild/${serverId}`}
+				className={`hidden md:flex group relative w-full aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0 ${recentClass}`}
 			>
+				{isRecent && (
+					<span className="absolute top-2 left-2 bg-indigo-600 text-white text-xs font-semibold px-2 py-0.5 rounded-md z-20">
+						Recently viewed
+					</span>
+				)}
 				<Image
 					src={imageUrl}
 					alt={`${serverName}'s icon`}
