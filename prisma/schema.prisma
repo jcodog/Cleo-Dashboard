@@ -57,6 +57,9 @@ model Users {
     plan                 Plans                 @default(FREE)
     limits               Limits?
     premiumServers       Servers[]
+    cleoPersonalityName  String?
+    cleoPersonalityId    String?
+    cleoPersonality      CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id])
 }
 
 model Limits {
@@ -71,22 +74,25 @@ model Limits {
 }
 
 model Servers {
-    id                  String    @id
+    id                  String             @id
     name                String
     ownerId             String
     icon                String?
-    isPremium           Boolean   @default(false)
+    isPremium           Boolean            @default(false)
     premiumAddedBy      String?
-    premiumUser         Users?    @relation(fields: [premiumAddedBy], references: [discordId])
-    aiEnabled           Boolean   @default(false)
+    premiumUser         Users?             @relation(fields: [premiumAddedBy], references: [discordId])
+    aiEnabled           Boolean            @default(false)
     welcomeChannel      String?
     announcementChannel String?
     updatesChannel      String?
     logsChannel         String?
-    logLevel            LogLevel  @default(NONE)
+    logLevel            LogLevel           @default(NONE)
     inviteLink          String?
     inviteCode          String?
     lastOpened          DateTime?
+    cleoPersonalityName String?
+    cleoPersonalityId   String?
+    cleoPersonality     CleoPersonalities? @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id])
 
     @@index([lastOpened])
 }
@@ -117,4 +123,14 @@ model Incidents {
     reason      String
     timestamp   DateTime        @default(now())
     status      IncidentsStatus @default(OPEN)
+}
+
+model CleoPersonalities {
+    id           String    @id @default(cuid())
+    name         String
+    systemPrompt String
+    Servers      Servers[]
+    Users        Users[]
+
+    @@unique([name, id])
 }

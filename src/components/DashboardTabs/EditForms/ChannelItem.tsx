@@ -10,7 +10,11 @@ import {
 } from "@/components/ui/select";
 import { client } from "@/lib/client";
 import { useAuth } from "@clerk/nextjs";
-import { useMutation } from "@tanstack/react-query";
+import {
+	QueryClient,
+	useMutation,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { RESTGetAPIGuildChannelsResult } from "discord-api-types/v10";
 import { Pen, Save, Trash } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -31,6 +35,7 @@ export const ChannelItem = ({
 	allChannels?: RESTGetAPIGuildChannelsResult | null;
 	guildId: string;
 }) => {
+	const queryClient = useQueryClient();
 	const { getToken } = useAuth();
 	const [editing, setEditing] = useState<boolean>(false);
 	const [channel, setChannel] = useState<{
@@ -57,6 +62,11 @@ export const ChannelItem = ({
 			if (data.success) {
 				setSaving(false);
 				setEditing(false);
+
+				queryClient.invalidateQueries({
+					queryKey: ["fetch-guild-channels"],
+				});
+
 				return;
 			}
 
