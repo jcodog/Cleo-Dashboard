@@ -8,6 +8,9 @@ import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { ClerkProvider } from "@/components/providers/clerk";
 import { CookieBanner } from "@/components/CookieBanner";
 
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+
 export const metadata: Metadata = {
 	title: { default: "Cleo", template: "%s | Cleo" },
 	description: "The official Cleo dashboard",
@@ -86,6 +89,8 @@ export default function RootLayout({
 						</JStackProvider>
 					</ClerkProvider>
 				</ThemeProvider>
+				<Analytics />
+				<SpeedInsights />
 			</body>
 		</html>
 	);

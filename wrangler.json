@@ -2,7 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "cleo-dash",
 	"main": "src/server/index.ts",
-	"compatibility_date": "2025-05-07",
+	"compatibility_date": "2025-07-16",
 	"compatibility_flags": [
 		"nodejs_compat",
 		"nodejs_als",
