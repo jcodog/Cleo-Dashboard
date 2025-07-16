@@ -1,9 +1,6 @@
-const Layout = ({
-	children,
-}: Readonly<{
-	children: React.ReactNode;
-}>) => {
-	return <main className="flex flex-1 flex-col p-2">{children}</main>;
+const Layout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
+	// Remove default padding for full-bleed landing background
+	return <main className="flex flex-1 flex-col">{children}</main>;
 };
 
 export default Layout;
