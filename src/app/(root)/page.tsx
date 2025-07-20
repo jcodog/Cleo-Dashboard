@@ -11,7 +11,7 @@ import Link from "next/link";
 
 export default async function Home() {
 	return (
-		<section className="relative flex flex-col items-center justify-center bg-black text-white overflow-x-hidden overflow-y-auto min-h-screen">
+		<section className="relative flex flex-col items-center justify-center bg-black text-white min-h-screen">
 			{/* Layered Animated Background */}
 			<div className="absolute inset-0 overflow-hidden">
 				<div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-800 to-pink-700 opacity-30"></div>
@@ -21,7 +21,7 @@ export default async function Home() {
 			</div>
 
 			{/* Hero Section */}
-			<div className="relative z-10 flex-1 w-full px-6 py-16 sm:py-20 md:py-40 text-center">
+			<div className="relative flex flex-col flex-1 z-10 w-full px-6 py-16 items-center justify-center text-center">
 				<Heading className="!inline-block text-7xl md:text-[8rem] lg:text-[10rem] font-extrabold bg-clip-text text-transparent bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 mb-4">
 					Cleo
 				</Heading>
@@ -75,7 +75,7 @@ export default async function Home() {
 			</div>
 
 			{/* Features Section */}
-			<div className="relative z-10 w-full max-w-6xl px-6 py-20">
+			<div className="relative flex flex-col z-10 w-full max-w-6xl px-6 py-20">
 				<Heading className="mb-12 text-4xl md:text-5xl font-semibold justify-center text-center">
 					Features
 				</Heading>
