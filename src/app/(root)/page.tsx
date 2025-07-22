@@ -1,4 +1,5 @@
 import { Heading } from "@/components/Heading";
+import { HeroButton } from "@/components/HeroButton";
 import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
 import {
@@ -11,11 +12,11 @@ import Link from "next/link";
 
 export default async function Home() {
 	return (
-		<section className="relative flex flex-col items-center justify-center bg-black text-white min-h-screen">
+		<section className="relative flex flex-col items-center justify-center bg-black text-white overflow-x-hidden">
 			{/* Layered Animated Background */}
 			<div
 				id="background-animations"
-				className="fixed inset-0 overflow-hidden -z-10"
+				className="fixed inset-0 overflow-hidden z-0"
 			>
 				<div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-800 to-pink-700 opacity-30"></div>
 				<div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-tr from-purple-600 to-pink-500 opacity-20 rounded-full filter blur-3xl animate-[spin_45s_linear_infinite]"></div>
@@ -24,7 +25,10 @@ export default async function Home() {
 			</div>
 
 			{/* Hero Section */}
-			<div className="relative flex flex-col flex-1 z-10 w-full px-6 py-16 items-center justify-center text-center">
+			<div
+				id="hero"
+				className="relative flex flex-col z-10 w-full px-6 py-16 min-h-screen items-center justify-center text-center"
+			>
 				<Heading className="!inline-block text-7xl md:text-[8rem] lg:text-[10rem] font-extrabold bg-clip-text text-transparent bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 mb-4">
 					Cleo
 				</Heading>
@@ -75,10 +79,15 @@ export default async function Home() {
 						</Button>
 					</SignedIn>
 				</div>
+
+				<HeroButton />
 			</div>
 
 			{/* Features Section */}
-			<div className="relative flex flex-col z-10 w-full max-w-6xl px-6 py-20">
+			<div
+				id="features"
+				className="relative flex flex-col z-10 w-full max-w-6xl px-6 py-20"
+			>
 				<Heading className="mb-12 text-4xl md:text-5xl font-semibold justify-center text-center">
 					Features
 				</Heading>
@@ -115,6 +124,17 @@ export default async function Home() {
 					</div>
 				</div>
 			</div>
+
+			{/*
+			<div id="reviews"></div>
+
+			<div
+				id="tipping"
+				className="relative flex flex-col z-10 w-full max-w-6xl px-6 py-20"
+			>
+				<SignedIn>User can send a tip</SignedIn>
+				<SignedOut>User cannot send a tip</SignedOut>
+			</div>*/}
 		</section>
 	);
 }
