@@ -62,7 +62,7 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" className="overflow-hidden" suppressHydrationWarning>
+		<html lang="en" suppressHydrationWarning>
 			<body className="min-w-full min-h-screen flex flex-col h-full w-full antialiased">
 				<ThemeProvider
 					attribute="class"

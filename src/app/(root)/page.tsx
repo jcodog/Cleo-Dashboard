@@ -13,7 +13,10 @@ export default async function Home() {
 	return (
 		<section className="relative flex flex-col items-center justify-center bg-black text-white min-h-screen">
 			{/* Layered Animated Background */}
-			<div className="absolute inset-0 overflow-hidden">
+			<div
+				id="background-animations"
+				className="fixed inset-0 overflow-hidden -z-10"
+			>
 				<div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-800 to-pink-700 opacity-30"></div>
 				<div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-tr from-purple-600 to-pink-500 opacity-20 rounded-full filter blur-3xl animate-[spin_45s_linear_infinite]"></div>
 				<div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-gradient-to-br from-green-400 to-blue-300 opacity-15 rounded-full filter blur-4xl animate-[spin_60s_linear_infinite] rotate-45"></div>
