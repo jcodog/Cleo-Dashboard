@@ -1,7 +1,7 @@
 import { clerkProcedure, j } from "@/server/jstack";
 
 export const authRouter = j.router({
-	sync_user: clerkProcedure.mutation(async ({ c, ctx }) => {
+	sync_user: clerkProcedure.query(async ({ c, ctx }) => {
 		const { client, token, db } = ctx;
 		// get clerk session and user
 		const session = await client.sessions.getSession(token.sid);
