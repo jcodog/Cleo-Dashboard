@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/prisma";
+import { clerkClient } from "@clerk/nextjs/server";
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { NextRequest } from "next/server";
 
@@ -58,6 +59,13 @@ export async function POST(req: NextRequest) {
 					},
 					include: { limits: true },
 				});
+
+				const client = await clerkClient()
+				await client.users.updateUserMetadata(id, {
+					privateMetadata: {
+						role: "user"
+					}
+				})
 
 				return new Response("User synced", { status: 200 });
 			}

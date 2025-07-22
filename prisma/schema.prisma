@@ -47,12 +47,18 @@ enum IncidentsStatus {
     REVOKED
 }
 
+enum Role {
+    staff
+    user
+}
+
 model Users {
     id                   String                @id @default(cuid())
     username             String                @unique
     email                String?               @unique
     extId                String?               @unique
     discordId            String                @unique
+    role                 Role                  @default(user)
     premiumSubscriptions PremiumSubscriptions?
     plan                 Plans                 @default(FREE)
     limits               Limits?

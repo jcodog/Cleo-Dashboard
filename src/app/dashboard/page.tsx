@@ -90,7 +90,10 @@ const DashboardHomePage = () => {
 				<div className="flex items-center gap-4">
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<div className="p-1 rounded-full hover:bg-gray-200/10 cursor-pointer">
+							<div className="p-1 flex gap-2 items-center justify-center rounded-full hover:bg-gray-200/10 cursor-pointer">
+								<p className="text-pretty text-sm font-medium">
+									User installed:
+								</p>
 								{isOauth2DataLoading ? (
 									<Loader className="h-5 w-5 animate-spin text-muted-foreground" />
 								) : isUserInstalled ? (
@@ -107,7 +110,7 @@ const DashboardHomePage = () => {
 								? "Checking installation status..."
 								: isUserInstalled
 								? "Cleo is installed on your account and usable in any server or DM that supports external apps"
-								: "Cleo is not installed. Click to install Cleo on your account."}
+								: "Cleo is not installed on your account. Click to install Cleo on your account."}
 						</TooltipContent>
 					</Tooltip>
 					<UserButton showName />
