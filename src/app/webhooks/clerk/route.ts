@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/prisma";
+import { Role } from "@/prisma";
 import { clerkClient } from "@clerk/nextjs/server";
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { NextRequest } from "next/server";
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
 					return new Response("User already synced", { status: 200 });
 				}
 
-				await db.users.create({
+				const newUser = await db.users.create({
 					data: {
 						extId: id,
 						username: username!,
@@ -60,12 +61,12 @@ export async function POST(req: NextRequest) {
 					include: { limits: true },
 				});
 
-				const client = await clerkClient()
+				const client = await clerkClient();
 				await client.users.updateUserMetadata(id, {
 					privateMetadata: {
-						role: "user"
-					}
-				})
+						role: newUser.role,
+					},
+				});
 
 				return new Response("User synced", { status: 200 });
 			}
@@ -90,8 +91,12 @@ export async function POST(req: NextRequest) {
 
 			case "user.updated": {
 				// track email changes only
-				const { id, email_addresses, primary_email_address_id } =
-					evt.data;
+				const {
+					id,
+					email_addresses,
+					primary_email_address_id,
+					private_metadata,
+				} = evt.data;
 				const emailEntry = email_addresses.find(
 					(e) => e.id === primary_email_address_id
 				);
@@ -100,9 +105,13 @@ export async function POST(req: NextRequest) {
 						status: 400,
 					});
 				}
+				const role = private_metadata.role as Role | undefined | null;
+				if (!role) {
+					return new Response("No user role found", { status: 400 });
+				}
 				const updated = await db.users.update({
 					where: { extId: id },
-					data: { email: emailEntry.email_address },
+					data: { email: emailEntry.email_address, role },
 				});
 				return new Response("User email updated", { status: 200 });
 			}
