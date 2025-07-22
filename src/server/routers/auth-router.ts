@@ -2,101 +2,24 @@ import { clerkProcedure, j } from "@/server/jstack";
 
 export const authRouter = j.router({
 	sync_user: clerkProcedure.mutation(async ({ c, ctx }) => {
-		const { db, client, token } = ctx;
-
+		const { client, token, db } = ctx;
+		// get clerk session and user
 		const session = await client.sessions.getSession(token.sid);
-
-		if (!session) {
-			return c.json({
-				success: false,
-				message: "Failed to sync user with the database. (no user)",
-			});
-		}
-
+		if (!session) return c.json({ synced: false });
 		const user = await client.users.getUser(session.userId);
-
-		if (!user) {
-			return c.json({
-				success: false,
-				message: "Failed to sync user with the database. (no user)",
-			});
-		}
-
-		console.log(user.externalAccounts);
-
+		if (!user) return c.json({ synced: false });
+		// extract discordId
 		const discordId = user.externalAccounts.find(
 			(account) => account.provider === "oauth_discord"
 		)?.externalId;
-
-		if (!discordId) {
-			return c.json({
-				success: false,
-				message:
-					"Discord id is required to sync the user with the database",
-			});
-		}
-
+		if (!discordId) return c.json({ synced: false });
+		// check if user is synced by webhook
 		try {
-			const existingUser = await db.users.findUnique({
-				where: { discordId },
-				include: { limits: true },
-			});
-
-			let syncedUser;
-
-			if (existingUser) {
-				// update
-				syncedUser = await db.users.update({
-					where: { discordId },
-					data: {
-						username: user.username || "anonymous",
-						email:
-							user.primaryEmailAddress?.emailAddress ||
-							"no@email.com",
-						extId: existingUser.extId
-							? existingUser.extId
-							: user.id,
-						limits: existingUser.limits
-							? { update: { date: new Date() } }
-							: { create: { date: new Date() } },
-					},
-					include: {
-						limits: true,
-					},
-				});
-			} else {
-				// create
-				syncedUser = await db.users.create({
-					data: {
-						username: user.username || "anonymous",
-						email:
-							user.primaryEmailAddress?.emailAddress ||
-							"no@email.com",
-						extId: user.id,
-						discordId,
-						limits: {
-							create: {
-								date: new Date(),
-							},
-						},
-					},
-					include: { limits: true },
-				});
-			}
-
-			return c.json({
-				success: true,
-				message: "User synced successfully",
-				syncedUser,
-			});
-		} catch (err) {
-			console.error(err);
-
-			return c.json({
-				success: false,
-				message:
-					"Something went wrong syncing the user with the database",
-			});
+			const exists = await db.users.findUnique({ where: { discordId } });
+			return c.json({ synced: !!exists });
+		} catch (err: any) {
+			console.error("Error checking user sync", err);
+			return c.json({ synced: false });
 		}
 	}),
 });

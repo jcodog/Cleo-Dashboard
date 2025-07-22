@@ -4,7 +4,7 @@ import { Heading } from "@/components/Heading";
 import { Button } from "@/components/ui/button";
 import { client } from "@/lib/client";
 import { useAuth } from "@clerk/nextjs";
-import { Users } from "@/prisma/client";
+// import Users type no longer needed
 import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, CloudUpload, Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 const WelcomePage = () => {
 	const router = useRouter();
-	const [user, setUser] = useState<Users | undefined>();
+	const [synced, setSynced] = useState<boolean | undefined>();
 	const [startSync, setStartSync] = useState(true);
 	const [showButton, setShowButton] = useState(false);
 	const { getToken } = useAuth();
@@ -32,28 +32,29 @@ const WelcomePage = () => {
 		},
 	});
 
+	// trigger sync on mount or retry
 	useEffect(() => {
 		if (startSync) {
 			setStartSync(false);
 			mutate();
 		}
-	}, [startSync]);
+	}, [startSync, mutate]);
 
 	useEffect(() => {
-		if (data && data.success) {
-			toast.success(data.message);
-			setUser(data.syncedUser);
-		}
-
-		if (data && !data.success) {
-			toast.error(data.message);
-			setStartSync(true);
+		if (data !== undefined) {
+			if (data.synced) {
+				toast.success("User synced successfully");
+				setSynced(true);
+			} else {
+				toast.error("Failed to sync user");
+				setStartSync(true);
+			}
 		}
 	}, [data]);
 
 	useEffect(() => {
 		setTimeout(() => {
-			if (!user && !isPending) {
+			if (!synced && !isPending) {
 				if (!startSync) {
 					setStartSync(true);
 				}
@@ -75,7 +76,7 @@ const WelcomePage = () => {
 						with the database.
 					</p>
 				</div>
-			) : user ? (
+			) : synced ? (
 				// Synced
 				<div className="flex flex-1 w-full p-4 bg-accent/40 rounded-md flex-col items-center justify-center gap-4">
 					<Heading>

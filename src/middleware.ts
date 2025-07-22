@@ -10,28 +10,27 @@ const isPublicRoute = createRouteMatcher([
 	"/sign-in(.*)",
 	"/sign-up(.*)",
 	"/policies(.*)",
+	"/webhooks(.*)",
 ]);
 
 const isStaffRoute = createRouteMatcher(["/staff(.*)", "/logs(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-	if (!isPublicRoute(req)) {
-		await auth.protect();
+	if (isPublicRoute(req)) return;
 
-		if (isStaffRoute(req)) {
-			const { userId } = await auth();
-			if (!userId) {
-				return NextResponse.redirect(new URL("/sign-in", req.url));
-			}
+	await auth.protect();
 
-			const client = await clerkClient();
-			const user = await client.users.getUser(userId);
+	if (isStaffRoute(req)) {
+		const { userId, redirectToSignIn } = await auth();
+		if (!userId) {
+			return redirectToSignIn({ returnBackUrl: req.nextUrl.href });
+		}
 
-			const role = user.privateMetadata?.role as string | undefined;
-
-			if (role !== "staff") {
-				return NextResponse.redirect(new URL("/dashboard", req.url));
-			}
+		const user = await clerkClient().then((client) =>
+			client.users.getUser(userId)
+		);
+		if (user.privateMetadata?.role !== "staff") {
+			return NextResponse.redirect(new URL("/dashboard", req.url));
 		}
 	}
 });
