@@ -8,6 +8,7 @@ import {
 	RESTGetAPIOAuth2CurrentAuthorizationResult,
 	RESTGetAPIUserResult,
 } from "discord-api-types/v10";
+import { loadStripe } from "@/lib/stripe";
 
 interface Env {
 	Bindings: {
@@ -18,17 +19,20 @@ interface Env {
 		DISCORD_BOT_TOKEN: string;
 		CLEO_API_KEY: string;
 		CLEO_KV: KVNamespace;
+		STRIPE_PUBLIC_KEY: string;
+		STRIPE_SECRET_KEY: string;
 	};
 }
 
 export const j = jstack.init<Env>();
 
-const dbMiddleware = j.middleware(async ({ c, next }) => {
-	const { DATABASE_URL, CLEO_KV } = env(c);
+const baseMiddleware = j.middleware(async ({ c, next }) => {
+	const { DATABASE_URL, CLEO_KV, STRIPE_SECRET_KEY } = env(c);
 
 	const db = getDb(DATABASE_URL);
+	const stripe = loadStripe({ secretKey: STRIPE_SECRET_KEY });
 
-	return await next({ db, kv: CLEO_KV });
+	return await next({ db, kv: CLEO_KV, stripe });
 });
 
 const clerkMiddleware = j.middleware(async ({ c, next }) => {
@@ -92,7 +96,7 @@ const clerkMiddleware = j.middleware(async ({ c, next }) => {
 
 const botMiddleware = j.middleware(async ({ c, ctx, next }) => {
 	const { CLEO_API_KEY, DISCORD_BOT_TOKEN } = env(c);
-	const { db } = ctx as InferMiddlewareOutput<typeof dbMiddleware>;
+	const { db } = ctx as InferMiddlewareOutput<typeof baseMiddleware>;
 	const authorizationHeader = c.req.header("Authorization");
 	const discordId = c.req.header("X-Discord-ID");
 
@@ -154,7 +158,7 @@ const botMiddleware = j.middleware(async ({ c, ctx, next }) => {
 
 const dashMiddleware = j.middleware(async ({ ctx, next }) => {
 	const { db, client, token } = ctx as InferMiddlewareOutput<
-		typeof dbMiddleware
+		typeof baseMiddleware
 	> &
 		InferMiddlewareOutput<typeof clerkMiddleware>;
 
@@ -216,7 +220,7 @@ const dashMiddleware = j.middleware(async ({ ctx, next }) => {
  *
  * This is the base piece you use to build new queries and mutations on your API.
  */
-export const publicProcedure = j.procedure.use(dbMiddleware);
+export const publicProcedure = j.procedure.use(baseMiddleware);
 
 /**
  * Clerk (semi-authenticated) procedures

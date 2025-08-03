@@ -10,6 +10,7 @@ import { CookieBanner } from "@/components/CookieBanner";
 
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { PreReleaseBanner } from "../components/PreReleaseBanner";
 
 export const metadata: Metadata = {
 	title: { default: "Cleo", template: "%s | Cleo" },
@@ -64,6 +65,7 @@ export default function RootLayout({
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<body className="min-w-full min-h-screen flex flex-col h-full w-full antialiased">
+				<PreReleaseBanner />
 				<ThemeProvider
 					attribute="class"
 					defaultTheme="system"

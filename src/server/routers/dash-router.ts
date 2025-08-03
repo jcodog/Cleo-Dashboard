@@ -201,7 +201,7 @@ export const dashRouter = j.router({
 	 */
 	getGuildInfo: dashProcedure
 		.input(z.object({ guildId: z.string() }))
-		.query(async ({ c, ctx: { db }, input: { guildId } }) => {
+		.query(async ({ c, ctx: { db, user }, input: { guildId } }) => {
 			const botToken = env(c).DISCORD_BOT_TOKEN;
 
 			try {
@@ -255,6 +255,7 @@ export const dashRouter = j.router({
 					data: {
 						guild: guildData,
 						dbGuild: dbGuild,
+						isOwner: user.discordId === guildData.owner_id,
 					},
 				});
 			} catch (err: any) {

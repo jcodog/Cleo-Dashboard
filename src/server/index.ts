@@ -4,6 +4,7 @@ import { authRouter } from "@/server/routers/auth-router";
 import { discordRouter } from "@/server/routers/discord-router";
 import { cleoRouter } from "@/server/routers/cleo-router";
 import { dashRouter } from "@/server/routers/dash-router";
+import { paymentRouter } from "@/server/routers/payment-router";
 
 /**
  * This is your base API.
@@ -38,6 +39,7 @@ const appRouter = j.mergeRouters(api, {
 	discord: discordRouter,
 	cleo: cleoRouter,
 	dash: dashRouter,
+	payment: paymentRouter,
 });
 
 export type AppRouter = typeof appRouter;

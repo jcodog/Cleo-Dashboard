@@ -52,6 +52,11 @@ enum Role {
     user
 }
 
+enum ProductType {
+    onetime
+    subscription
+}
+
 model Users {
     id                   String                @id @default(cuid())
     username             String                @unique
@@ -59,6 +64,7 @@ model Users {
     extId                String?               @unique
     discordId            String                @unique
     role                 Role                  @default(user)
+    customerId           String?               @unique
     premiumSubscriptions PremiumSubscriptions?
     plan                 Plans                 @default(FREE)
     limits               Limits?
@@ -99,6 +105,7 @@ model Servers {
     cleoPersonalityName String?
     cleoPersonalityId   String?
     cleoPersonality     CleoPersonalities? @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id])
+    AutomodConfig       AutomodConfig[]
 
     @@index([lastOpened])
 }
@@ -139,4 +146,31 @@ model CleoPersonalities {
     Users        Users[]
 
     @@unique([name, id])
+}
+
+model Products {
+    id     String      @id // The stripe product id
+    name   String      @unique
+    type   ProductType
+    prices Prices[]
+}
+
+model Prices {
+    id        String   @id // The stripe price id
+    amount    Int
+    default   Boolean  @default(false)
+    productId String
+    product   Products @relation(fields: [productId], references: [id])
+}
+
+model AutomodConfig {
+    id              String   @id @default(cuid())
+    active          Boolean  @default(false)
+    profanity       Boolean  @default(false)
+    matureContent   Boolean  @default(false)
+    links           Boolean  @default(false)
+    ignoredChannels String[] @default([])
+    approvedLinks   String[] @default([])
+    guildId         String   @unique
+    guild           Servers  @relation(fields: [guildId], references: [id])
 }

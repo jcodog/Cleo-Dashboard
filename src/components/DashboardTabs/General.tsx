@@ -7,6 +7,7 @@ import { Heading } from "@/components/Heading";
 import { client } from "@/lib/client";
 import { useQuery } from "@tanstack/react-query";
 import { Gem, SmilePlus, Sticker, User, Users } from "lucide-react";
+import { DeleteGuild } from "./EditForms/DeleteGuild";
 
 export const General = ({
 	guildId,
@@ -27,7 +28,7 @@ export const General = ({
 			if (!json.success) {
 				return;
 			}
-			const { guild, dbGuild } = json.data;
+			const { guild, dbGuild, isOwner } = json.data;
 			return {
 				guild,
 				dbGuild: {
@@ -36,6 +37,7 @@ export const General = ({
 						? new Date(dbGuild.lastOpened)
 						: null,
 				},
+				isOwner,
 			};
 		},
 	});
@@ -137,6 +139,10 @@ export const General = ({
 								guild={data?.dbGuild!}
 								isDirty={isDirty}
 								setDirtyAction={setDirtyAction}
+							/>
+							<DeleteGuild
+								isOwner={data!.isOwner}
+								guildId={data!.dbGuild!.id!}
 							/>
 						</>
 					)}

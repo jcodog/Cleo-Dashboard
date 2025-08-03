@@ -1,10 +1,12 @@
 import { getDb } from "@/lib/prisma";
+import { loadStripe } from "@/lib/stripe";
 import { Role } from "@/prisma";
 import { clerkClient } from "@clerk/nextjs/server";
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { NextRequest } from "next/server";
 
 const db = getDb(process.env.DATABASE_URL!);
+const stripe = loadStripe({ secretKey: process.env.STRIPE_SECRET_KEY! });
 
 export async function POST(req: NextRequest) {
 	// Verify webhook signature
@@ -27,6 +29,8 @@ export async function POST(req: NextRequest) {
 					email_addresses,
 					primary_email_address_id,
 					external_accounts,
+					first_name,
+					last_name,
 				} = evt.data;
 
 				const emailAddress = email_addresses.filter(
@@ -46,12 +50,20 @@ export async function POST(req: NextRequest) {
 					return new Response("User already synced", { status: 200 });
 				}
 
+				const customer = await stripe.customers.create({
+					name: last_name
+						? `${first_name} ${last_name}`
+						: `${first_name}`,
+					email: emailAddress!.email_address,
+				});
+
 				const newUser = await db.users.create({
 					data: {
 						extId: id,
 						username: username!,
 						discordId: discord!.provider_user_id,
 						email: emailAddress!.email_address,
+						customerId: customer.id,
 						limits: {
 							create: {
 								date: new Date(),
@@ -80,6 +92,10 @@ export async function POST(req: NextRequest) {
 				if (!existing) {
 					return new Response("User not found", { status: 200 });
 				}
+
+				if (existing.customerId)
+					await stripe.customers.del(existing.customerId!);
+
 				// delete related records to avoid foreign key constraints
 				await db.limits.deleteMany({ where: { id: existing.id } });
 				await db.premiumSubscriptions.deleteMany({
