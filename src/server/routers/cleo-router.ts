@@ -41,12 +41,17 @@ export const cleoRouter = j.router({
       });
     }
 
-    // Normalize to midnight for day comparison
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const limitDayTs = new Date(limits.date).setHours(0, 0, 0, 0);
+    // Use UTC start-of-day timestamps for day comparison
+    const startOfUtcDay = (d: Date) => {
+      const x = new Date(d);
+      x.setUTCHours(0, 0, 0, 0);
+      return x.getTime();
+    };
 
-    if (limitDayTs === today.getTime()) {
+    const todayUtcStart = startOfUtcDay(new Date());
+    const limitUtcStart = startOfUtcDay(new Date(limits.date));
+
+    if (limitUtcStart === todayUtcStart) {
       if (limits.aiUsed + 1 > limits.aiLimit) {
         return c.json({ valid: false, reason: "AI limit reached" });
       }
@@ -56,6 +61,55 @@ export const cleoRouter = j.router({
     return c.json({
       valid: true,
       reason: "New day so limits reset",
+    });
+  }),
+
+  incrementUsage: botProcedure.mutation(async ({ c, ctx }) => {
+    const { user, db } = ctx;
+
+    if (!user.limits)
+      return c.json({
+        success: false,
+        message: "User has no limits to increment",
+      });
+
+    // Use UTC start-of-day timestamps for day comparison
+    const startOfUtcDay = (d: Date) => {
+      const x = new Date(d);
+      x.setUTCHours(0, 0, 0, 0);
+      return x.getTime();
+    };
+
+    const todayUtcStart = startOfUtcDay(new Date());
+    const limitUtcStart = startOfUtcDay(new Date(user.limits.date));
+    const isSameUtcDay = limitUtcStart === todayUtcStart;
+
+    if (isSameUtcDay) {
+      await db.limits.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          aiUsed: user.limits.aiUsed + 1,
+        },
+      });
+    } else {
+      await db.limits.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          aiUsed: 1,
+          date: new Date(),
+        },
+      });
+    }
+
+    return c.json({
+      success: true,
+      message: isSameUtcDay
+        ? "Usage incremented by 1"
+        : "Limits reset and usage incremented by 1",
     });
   }),
 
