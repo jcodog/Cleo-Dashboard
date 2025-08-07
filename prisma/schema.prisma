@@ -78,7 +78,7 @@ model Limits {
     id                  String   @id
     date                DateTime
     aiUsed              Int      @default(0)
-    aiLimit             Int      @default(20)
+    aiLimit             Int      @default(5)
     additionalMessages  Int      @default(0)
     premiumServers      Int      @default(0)
     premiumServerLimmit Int      @default(0)
