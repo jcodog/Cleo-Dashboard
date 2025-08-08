@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { client } from "@/lib/client";
+import { getMachineTokenType } from "@clerk/backend/internal";
 
 /**
  * AvatarSyncProvider
@@ -10,7 +11,7 @@ import { client } from "@/lib/client";
  * and updates the Clerk profile image if it's different. Runs once per session.
  */
 export const AvatarSyncProvider = () => {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
   const { user } = useUser();
   const { user: clerkUser } = useClerk();
   const ranRef = useRef(false);
@@ -22,7 +23,11 @@ export const AvatarSyncProvider = () => {
     (async () => {
       try {
         // Fetch current Discord avatar
-        const res = await client.auth.getDiscordAvatar.$get();
+        const res = await client.auth.getDiscordAvatar.$get(undefined, {
+          headers: {
+            Authorization: `Bearer ${await getToken()}`,
+          },
+        });
         const { url } = await res.json();
         if (!url) return;
 
