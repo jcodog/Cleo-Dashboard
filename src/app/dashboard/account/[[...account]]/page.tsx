@@ -1,6 +1,7 @@
 "use client";
 
 import { AiUsage } from "@/components/AccountTabs/AiUsage";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { UserProfile, SignOutButton } from "@clerk/nextjs";
 import { Gauge, Home, LogOut } from "lucide-react";
@@ -21,15 +22,18 @@ const AccountPage = () => {
           <Home className="size-6" />
           Home
         </Button>
-        <SignOutButton>
-          <Button
-            variant="ghost"
-            className="text-rose-500 hover:text-rose-300 cursor-pointer"
-          >
-            <LogOut className="size-4" />
-            Sign out
-          </Button>
-        </SignOutButton>
+        <div className="flex gap-2">
+          <SignOutButton>
+            <Button
+              variant="ghost"
+              className="text-rose-500 hover:text-rose-300 hover:bg-red-300 cursor-pointer"
+            >
+              <LogOut className="size-4" />
+              Sign out
+            </Button>
+          </SignOutButton>
+          <ThemeToggle />
+        </div>
       </nav>
       <div className="flex flex-1 items-center justify-center">
         <UserProfile path="/dashboard/account">
