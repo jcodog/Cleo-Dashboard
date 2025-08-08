@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config({
-	path: ".env",
+  path: ".env",
 });
 
 import type Stripe from "stripe";
@@ -15,142 +15,160 @@ const db = getDb(process.env.DATABASE_URL!);
 
 // Determine integer amount: prefer unit_amount, fallback to custom_unit_amount.preset
 function getPriceAmount(price: Stripe.Price): number {
-	return price.unit_amount ?? price.custom_unit_amount?.preset ?? 0;
+  return price.unit_amount ?? price.custom_unit_amount?.preset ?? 0;
 }
 
 const seedProduct = async (
-	product: Stripe.ProductCreateParams,
-	type: ProductType
+  product: Stripe.ProductCreateParams,
+  type: ProductType
 ) => {
-	console.log(`Seeding ${type} product: ${product.name}`);
+  console.log(`Seeding ${type} product: ${product.name}`);
 
-	// Check if the product exists on stripe already
-	const stripeProduct = await stripe.products.search({
-		query: `name: '${product.name}'`,
-		limit: 1,
-		expand: ["data.default_price"],
-	});
+  // Check if the product exists on stripe already
+  const stripeProduct = await stripe.products.search({
+    query: `name: '${product.name}'`,
+    limit: 1,
+    expand: ["data.default_price"],
+  });
 
-	if (!stripeProduct.data[0]) {
-		// Create and seed the product information into the db
-		const newProduct = await stripe.products.create(product);
+  // Helper to fully sync a Stripe product (and ALL its prices) into the DB
+  const syncProductIntoDb = async (stripeProductId: string) => {
+    // Re-retrieve the product to ensure default_price is up to date
+    const fullProduct = await stripe.products.retrieve(stripeProductId, {
+      expand: ["default_price"],
+    });
 
-		const dbProduct = await db.products.findFirst({
-			where: {
-				OR: [{ id: newProduct.id }, { name: newProduct.name }],
-			},
-		});
+    // Get all prices for this product
+    const allPrices = await stripe.prices.list({
+      product: fullProduct.id,
+      limit: 100,
+    });
 
-		if (!dbProduct) {
-			// create new db entry
-			const defaultPrice = newProduct.default_price as Stripe.Price;
-			console.log(defaultPrice);
+    const defaultPriceId =
+      typeof fullProduct.default_price === "string"
+        ? fullProduct.default_price
+        : (fullProduct.default_price as Stripe.Price | null)?.id ?? null;
 
-			await db.products.create({
-				data: {
-					id: newProduct.id,
-					name: newProduct.name,
-					type,
-					prices: {
-						create: {
-							id: defaultPrice.id,
-							amount: getPriceAmount(defaultPrice),
-							default: true,
-						},
-					},
-				},
-			});
-		} else {
-			// update db entry
-			const defaultPrice = newProduct.default_price as Stripe.Price;
-			console.log(defaultPrice);
+    const priceCreates = allPrices.data.map((p) => ({
+      id: p.id,
+      amount: getPriceAmount(p),
+      default: defaultPriceId ? p.id === defaultPriceId : false,
+    }));
 
-			await db.products.update({
-				where: { id: dbProduct.id },
-				data: {
-					id: newProduct.id,
-					name: newProduct.name,
-					type,
-					prices: {
-						deleteMany: {},
-						create: {
-							id: defaultPrice.id,
-							amount: getPriceAmount(defaultPrice),
-							default: true,
-						},
-					},
-				},
-			});
-		}
-	} else {
-		// Seed the product information into the db
-		const dbProduct = await db.products.findFirst({
-			where: {
-				OR: [
-					{ id: stripeProduct.data[0].id },
-					{ name: stripeProduct.data[0].name },
-				],
-			},
-		});
+    // If a product with the same name exists in the DB but with a different id,
+    // remove it so we can replace it with the current Stripe product id.
+    // This handles cases where a Stripe product was deleted/recreated.
+    const existingByName = await db.products.findFirst({
+      where: {
+        name: fullProduct.name,
+        NOT: { id: fullProduct.id }, // exclude the same product id
+      },
+      select: { id: true },
+    });
 
-		if (!dbProduct) {
-			// create new db entry
-			const defaultPrice = stripeProduct.data[0]
-				.default_price as Stripe.Price;
-			console.log(defaultPrice);
+    if (existingByName) {
+      // Clean up dependent prices first to satisfy FK constraints, then delete the product.
+      await db.prices.deleteMany({ where: { productId: existingByName.id } });
+      await db.products.delete({ where: { id: existingByName.id } });
+    }
 
-			await db.products.create({
-				data: {
-					id: stripeProduct.data[0].id,
-					name: stripeProduct.data[0].name,
-					type,
-					prices: {
-						create: {
-							id: defaultPrice.id,
-							amount: getPriceAmount(defaultPrice),
-							default: true,
-						},
-					},
-				},
-			});
-		} else {
-			// update db entry
-			const defaultPrice = stripeProduct.data[0]
-				.default_price as Stripe.Price;
-			console.log(defaultPrice);
+    // Upsert product and replace its prices snapshot
+    await db.products.upsert({
+      where: { id: fullProduct.id },
+      create: {
+        id: fullProduct.id,
+        name: fullProduct.name,
+        type,
+        prices: { create: priceCreates },
+      },
+      update: {
+        name: fullProduct.name,
+        type,
+        prices: {
+          deleteMany: {},
+          create: priceCreates,
+        },
+      },
+    });
+  };
 
-			await db.products.update({
-				where: { id: dbProduct.id },
-				data: {
-					id: stripeProduct.data[0].id,
-					name: stripeProduct.data[0].name,
-					type,
-					prices: {
-						deleteMany: {},
-						create: {
-							id: defaultPrice.id,
-							amount: getPriceAmount(defaultPrice),
-							default: true,
-						},
-					},
-				},
-			});
-		}
-	}
+  if (!stripeProduct.data[0]) {
+    // Create and seed the product on Stripe first
+    const newProduct = await stripe.products.create(product);
+
+    // Special-case: create additional message pricing tiers
+    if (newProduct.name === "Cleo AI Additional Messages") {
+      console.log("Creating additional message pricing tiers");
+      const smallBundle = await stripe.prices.create({
+        product: newProduct.id,
+        currency: "GBP",
+        transform_quantity: {
+          divide_by: 100,
+          round: "up",
+        },
+        unit_amount: 500,
+        nickname: "Small message bundle",
+      });
+
+      const mediumBundle = await stripe.prices.create({
+        product: newProduct.id,
+        currency: "GBP",
+        transform_quantity: {
+          divide_by: 250,
+          round: "up",
+        },
+        unit_amount: 1000,
+        nickname: "Medium message bundle",
+      });
+
+      const largeBundle = await stripe.prices.create({
+        product: newProduct.id,
+        currency: "GBP",
+        transform_quantity: {
+          divide_by: 500,
+          round: "up",
+        },
+        unit_amount: 1500,
+        nickname: "Large message bundle",
+      });
+
+      const mesgaBundle = await stripe.prices.create({
+        product: newProduct.id,
+        currency: "GBP",
+        transform_quantity: {
+          divide_by: 1000,
+          round: "up",
+        },
+        unit_amount: 3000,
+        nickname: "Mega message bundle",
+      });
+
+      // Set a sensible default
+      await stripe.products.update(newProduct.id, {
+        default_price: smallBundle.id,
+      });
+    }
+
+    // Now sync the created product and all prices into the DB
+    await syncProductIntoDb(newProduct.id);
+  } else {
+    // Product exists on Stripe already; just sync it fully into the DB
+    await syncProductIntoDb(stripeProduct.data[0].id);
+  }
 };
 
 const seeder = async () => {
-	console.log("Seeding stripe products.");
-	// seed one time purchases serially
-	for (const product of oneTimePurchaseProducts) {
-		await seedProduct(product, "onetime");
-	}
+  console.log("Seeding stripe products.");
+  // seed one time purchases serially
+  for (const product of oneTimePurchaseProducts) {
+    await seedProduct(product, "onetime");
+  }
 
-	// seed subscription purchases serially
-	for (const product of subscriptions) {
-		await seedProduct(product, "subscription");
-	}
-	console.log("Stripe products seeded.");
+  // seed subscription purchases serially
+  for (const product of subscriptions) {
+    await seedProduct(product, "subscription");
+  }
+  console.log("Stripe products seeded.");
 };
 
 seeder();

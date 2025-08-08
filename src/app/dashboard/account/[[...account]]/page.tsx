@@ -26,7 +26,7 @@ const AccountPage = () => {
           <SignOutButton>
             <Button
               variant="ghost"
-              className="text-rose-500 hover:text-rose-300 hover:bg-red-300 cursor-pointer"
+              className="text-rose-500 hover:text-rose-300 cursor-pointer"
             >
               <LogOut className="size-4" />
               Sign out

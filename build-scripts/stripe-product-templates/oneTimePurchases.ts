@@ -1,20 +1,14 @@
 import type Stripe from "stripe";
 
-const tippingProduct: Stripe.ProductCreateParams = {
-	name: "Cleo Tip",
-	description:
-		"Give a tip to the team behind Cleo continually updating her and providing her live free services.",
-	statement_descriptor: "Cleo Tip",
-	default_price_data: {
-		currency: "GBP",
-		custom_unit_amount: {
-			enabled: true,
-			minimum: 100,
-			maximum: 2000,
-			preset: 500,
-		},
-	},
-	expand: ["default_price"],
+const additionalMessagesProduct: Stripe.ProductCreateParams = {
+  name: "Cleo AI Additional Messages",
+  description:
+    "One time purchase of a bundle of messages to use when you run out of your daily limit messages on your plan. These additional messages let you keep chatting, without having to upgrade your plan.",
+  statement_descriptor: "Cleo AI Messages",
+  expand: ["default_price"],
+  images: [
+    "https://cdn.cleoai.cloud/product-images/message-topup/product-icon-one.png",
+  ],
 };
 
-export const oneTimePurchaseProducts = [tippingProduct];
+export const oneTimePurchaseProducts = [additionalMessagesProduct];

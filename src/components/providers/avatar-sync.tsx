@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { client } from "@/lib/client";
-import { getMachineTokenType } from "@clerk/backend/internal";
 
 /**
  * AvatarSyncProvider
