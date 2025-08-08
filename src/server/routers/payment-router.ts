@@ -38,12 +38,37 @@ export const paymentRouter = j.router({
         path: z.string(),
       })
     )
-    .mutation(async ({ c, ctx: { user, stripe }, input }) => {
+    .mutation(async ({ c, ctx: { db, user, stripe }, input }) => {
+      let customerId: string;
+      // Ensure a Stripe customer exists for this user
+      if (!user.customerId) {
+        const customer = await stripe.customers.create({
+          email: (user as any).email ?? undefined,
+          name: ((user as any).name ?? (user as any).username) || undefined,
+          metadata: {
+            app_user_id: String((user as any).id ?? ""),
+          },
+        });
+
+        await db.users.update({
+          where: {
+            id: user.id,
+          },
+          data: {
+            customerId: customer.id,
+          },
+        });
+
+        customerId = customer.id;
+      } else {
+        customerId = user.customerId;
+      }
+
       const checkout = await stripe.checkout.sessions.create({
         adaptive_pricing: {
           enabled: true,
         },
-        customer: user.customerId!,
+        customer: customerId,
         mode: input.type,
         line_items: [
           {
@@ -51,7 +76,7 @@ export const paymentRouter = j.router({
             quantity: 1,
           },
         ],
-        success_url: `${input.domain}/dashboard/purchase?s=processing`,
+        success_url: `${input.domain}/dashboard/purchase?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${input.domain}/${input.path}`,
       });
 

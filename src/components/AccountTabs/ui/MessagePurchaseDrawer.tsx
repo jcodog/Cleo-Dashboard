@@ -111,7 +111,7 @@ export const MessagePurchaseDrawer = () => {
         onClick ? onClick(priceId) : console.log("select price", priceId)
       }
       className={cn(
-        "relative w-full text-left rounded-lg border p-4 transition focus:outline-none focus:ring-2 focus:ring-primary",
+        "cursor-pointer relative w-full text-left rounded-lg border p-4 transition focus:outline-none focus:ring-2 focus:ring-primary",
         featured
           ? "border-primary/50 bg-primary/5 hover:bg-primary/10 ring-1 ring-primary/30"
           : "border-border hover:bg-muted/40"
@@ -195,6 +195,7 @@ export const MessagePurchaseDrawer = () => {
                           ? price.default
                           : idx === featured
                       }
+                      onClick={() => mutate(price.id)}
                     />
                   ))}
               </div>
