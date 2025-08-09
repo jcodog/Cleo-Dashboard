@@ -60,6 +60,7 @@ export const cleoRouter = j.router({
 
     return c.json({
       valid: true,
+      plan: user.plan,
       reason: "New day so limits reset",
     });
   }),
