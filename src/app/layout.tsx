@@ -1,17 +1,16 @@
+import "@/styles/globals.css";
 import type { Metadata } from "next";
 import { JStackProvider } from "@/components/providers/jstack";
-
-import "@/styles/globals.css";
 import { ThemeProvider } from "@/components/providers/theme";
 import { Toaster } from "@/components/ui/sonner";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { ClerkProvider } from "@/components/providers/clerk";
 import { CookieBanner } from "@/components/CookieBanner";
-
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PreReleaseBanner } from "../components/PreReleaseBanner";
 import { AvatarSyncProvider } from "@/components/providers/avatar-sync";
+import { Databuddy } from "@databuddy/sdk";
 
 export const metadata: Metadata = {
   title: { default: "Cleo", template: "%s | Cleo" },
