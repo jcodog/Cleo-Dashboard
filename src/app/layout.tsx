@@ -76,6 +76,20 @@ export default function RootLayout({
           <ClerkProvider>
             <JStackProvider>
               {children}
+              <Databuddy
+                clientId="kYvU4Eddh8RzHScTlZ3Pj"
+                trackHashChanges={true}
+                trackAttributes={true}
+                trackOutgoingLinks={true}
+                trackInteractions={true}
+                trackEngagement={true}
+                trackScrollDepth={true}
+                trackExitIntent={true}
+                trackBounceRate={true}
+                trackWebVitals={true}
+                trackErrors={true}
+                enableBatching={true}
+              />
               <AvatarSyncProvider />
               <Toaster
                 richColors

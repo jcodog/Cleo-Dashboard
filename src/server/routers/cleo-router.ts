@@ -53,9 +53,17 @@ export const cleoRouter = j.router({
 
     if (limitUtcStart === todayUtcStart) {
       if (limits.aiUsed + 1 > limits.aiLimit) {
-        return c.json({ valid: false, reason: "AI limit reached" });
+        return c.json({
+          valid: false,
+          plan: user.plan,
+          reason: "AI limit reached",
+        });
       }
-      return c.json({ valid: true, reason: "AI limit not reached" });
+      return c.json({
+        valid: true,
+        plan: user.plan,
+        reason: "AI limit not reached",
+      });
     }
 
     return c.json({
