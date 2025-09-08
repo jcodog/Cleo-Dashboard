@@ -13,7 +13,7 @@ const AddPage = () => {
 	const { getToken } = useAuth();
 	const router = useRouter();
 
-	const { mutate } = useMutation({
+	const { mutate, data: generatedUrl } = useMutation({
 		mutationKey: ["start-cleo-add"],
 		mutationFn: async (mode: "user" | "server") => {
 			const token = await getToken();
@@ -28,8 +28,16 @@ const AddPage = () => {
 			);
 
 			console.log(res);
+			return await res.json()
 		},
 	});
+
+	useEffect(() => {
+		if (generatedUrl && generatedUrl.url) {
+			router.push("/dashboard");
+			window.open(generatedUrl.url, "_blank")!.focus();
+		}
+	}, [generatedUrl]);
 
 	return (
 		<section className="flex flex-1 flex-col items-center justify-center gap-8 max-w-3xl">
