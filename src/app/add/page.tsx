@@ -8,6 +8,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "@tanstack/react-query";
 import { Server, User } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const AddPage = () => {
 	const { getToken } = useAuth();
