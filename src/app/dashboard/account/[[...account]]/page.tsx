@@ -13,7 +13,7 @@ const AccountPage = () => {
   return (
     <section className="flex flex-1 flex-col items-center p-4">
       {/* Top navigation bar */}
-      <nav className="w-full flex justify-between items-center mb-4 border-b pb-2 max-w-7xl">
+      <nav className="w-full max-w-6xl flex justify-between items-center mb-4 rounded-xl border border-border/60 bg-card/70 backdrop-blur px-4 py-3">
         <Button
           variant="ghost"
           onClick={() => router.push("/dashboard")}
@@ -35,8 +35,16 @@ const AccountPage = () => {
           <ThemeToggle />
         </div>
       </nav>
-      <div className="flex flex-1 items-center justify-center">
-        <UserProfile path="/dashboard/account">
+      <div className="flex flex-1 items-center justify-center w-full">
+        <UserProfile
+          path="/dashboard/account"
+          appearance={{
+            elements: {
+              rootBox: "w-full",
+              card: "w-full max-w-5xl rounded-xl border border-border/60 bg-card/70 backdrop-blur",
+            },
+          }}
+        >
           <UserProfile.Page label="account" />
           <UserProfile.Page
             label="AI Usage"

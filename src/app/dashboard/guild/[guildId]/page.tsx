@@ -9,7 +9,8 @@ import { client } from "@/lib/client";
 import { cn } from "@/lib/utils";
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, House, Loader } from "lucide-react";
+import { ArrowRight, House, Loader, FileWarning, Activity } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useState } from "react";
@@ -39,21 +40,29 @@ type Tabs = {
   component: React.FC<TabProps>;
 };
 
-const LoggingTab = () => {
-  return (
-    <div className="flex flex-1 items-center justify-center text-center">
-      <p>Nothing here, we aren't ready to give you this tab.</p>
-    </div>
-  );
-};
+const LoggingTab = () => (
+  <div className="flex flex-1 w-full items-center justify-center p-4">
+    <EmptyState
+      size="lg"
+      variant="info"
+      icon={<FileWarning className="size-full" />}
+      heading="Logging coming soon"
+      description="We're building powerful audit & moderation log visibility. Add your channels now so you can enable it the moment it launches."
+    />
+  </div>
+);
 
-const IncidentsTab = () => {
-  return (
-    <div className="flex flex-1 items-center justify-center text-center">
-      <p>Nothing here, we aren't ready to give you this tab.</p>
-    </div>
-  );
-};
+const IncidentsTab = () => (
+  <div className="flex flex-1 w-full items-center justify-center p-4">
+    <EmptyState
+      size="lg"
+      variant="default"
+      icon={<Activity className="size-full" />}
+      heading="Incident center not enabled yet"
+      description="Real-time incident triage & escalation workflows will live here. Stay tuned."
+    />
+  </div>
+);
 
 const tabs: Tabs[] = [
   {
@@ -162,32 +171,35 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
   }, [headerInfo]);
 
   return headerLoading || !headerInfo ? (
-    <section className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
+    <section className="relative flex flex-1 flex-col items-center justify-center gap-4 p-6">
       <Loader className="size-10 animate-spin" />
       <p>Loading server info...</p>
     </section>
   ) : (
-    <section className="flex flex-1 flex-col items-center justify-center p-4">
-      <div className="flex flex-1 flex-col w-full bg-accent/20 rounded-md shadow-lg">
-        <div className="flex w-full gap-4 p-4 items-end justify-between rounded-t-md bg-accent/40 shadow-lg border-b border-background">
-          <div className="flex gap-4 items-end justify-start">
-            <div className="relative h-10 w-10">
+    <section className="relative flex flex-1 flex-col items-center justify-center p-6">
+      <div className="flex flex-1 flex-col w-full max-w-6xl rounded-xl border border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.25)]">
+        <div className="flex w-full gap-4 p-5 items-center justify-between rounded-t-xl bg-gradient-to-b from-accent/60 to-accent/30 border-b border-border/60">
+          <div className="flex gap-4 items-center justify-start min-w-0">
+            <div className="relative h-11 w-11 shrink-0">
               <Image
                 src={headerInfo.icon}
                 fill
-                className="rounded-full object-cover"
+                className="rounded-full object-cover ring-1 ring-border/60 shadow-sm"
                 alt={`${headerInfo.name || "Server"}'s icon`}
               />
             </div>
-            <Heading>{headerInfo.name}</Heading>
-            <p className="text-muted-foreground font-mono text-sm">
-              {headerInfo.description || "No description"}
-            </p>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <Heading className="truncate">{headerInfo.name}</Heading>
+              <p className="text-muted-foreground font-mono text-xs sm:text-sm truncate max-w-[80ch]">
+                {headerInfo.description || "No description"}
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-2">
             <Button
               onClick={() => router.push("/dashboard")}
+              variant="gradient"
               className="cursor-pointer"
             >
               <House className="size-4" />
@@ -196,8 +208,8 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
           </div>
         </div>
         <div className="flex flex-1">
-          <div className="flex flex-col flex-1 w-56 min-w-56 max-w-56 py-4 gap-2 bg-accent/30 rounded-bl-md justify-between">
-            <ul className="flex flex-col gap-2 px-2 select-none">
+          <div className="flex flex-col flex-1 w-60 min-w-60 max-w-60 py-4 gap-2 bg-accent/20 rounded-bl-xl justify-between border-r border-border/60">
+            <ul className="flex flex-col gap-1.5 px-2 select-none">
               {tabs.map((tab) => (
                 <li
                   key={tab.value}
@@ -210,25 +222,44 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
                       confirmLeave(url);
                     }
                   }}
-                  className={cn("flex items-center gap-2 justify-between p-2", {
-                    "cursor-pointer hover:bg-accent/60 rounded-md":
-                      !tab.disabled && tab.value !== activeTabValue,
-                    "cursor-not-allowed text-muted-foreground": tab.disabled,
-                    "bg-accent": tab.value === activeTabValue,
-                  })}
+                  className={cn(
+                    "group relative flex items-center gap-2 justify-between p-2.5 rounded-md transition-colors",
+                    {
+                      "cursor-pointer hover:bg-accent/60":
+                        !tab.disabled && tab.value !== activeTabValue,
+                      "cursor-not-allowed text-muted-foreground": tab.disabled,
+                      "bg-accent shadow-xs ring-1 ring-border/60":
+                        tab.value === activeTabValue,
+                    }
+                  )}
                 >
-                  {tab.name}
-                  <ArrowRight className="size-4" />
+                  {tab.value === activeTabValue && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r bg-[linear-gradient(180deg,var(--color-chart-2),var(--color-chart-5))]" />
+                  )}
+                  <span
+                    className={cn("truncate", {
+                      "font-medium": tab.value === activeTabValue,
+                    })}
+                  >
+                    {tab.name}
+                  </span>
+                  <ArrowRight
+                    className={cn("size-4 transition-transform", {
+                      "group-hover:translate-x-0.5":
+                        !tab.disabled && tab.value !== activeTabValue,
+                    })}
+                  />
                 </li>
               ))}
             </ul>
-            <div className="flex justify-between px-4 pt-4 border-t border-background">
+            <div className="flex justify-between px-4 pt-4 border-t border-border/60">
               <UserButton
                 appearance={{
                   elements: {
                     userButtonBox: {
                       flexDirection: "row-reverse",
                     },
+                    userButtonPopoverCard: "align-right",
                   },
                 }}
                 showName

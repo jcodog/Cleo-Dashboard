@@ -83,22 +83,46 @@ const DashboardHomePage = () => {
 
   return (
     <section className="container mx-auto p-6 flex flex-col items-center gap-8">
-      <header className="w-full flex items-center justify-between mb-8">
-        <Heading>Dashboard</Heading>
-        <div className="flex items-center gap-4">
+      <header className="w-full max-w-6xl flex items-center justify-between mb-4 rounded-xl border border-border/60 bg-card/70 backdrop-blur px-3 py-2 sm:px-4 sm:py-3">
+        <Heading className="text-2xl sm:text-3xl">Dashboard</Heading>
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Compact status on mobile */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="p-1 flex gap-2 items-center justify-center rounded-full hover:bg-gray-200/10 cursor-pointer">
+              <div className="sm:hidden inline-flex items-center justify-center size-8 rounded-full border border-border/60 bg-background/60 cursor-pointer">
+                {isOauth2DataLoading ? (
+                  <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : isUserInstalled ? (
+                  <CircleCheck className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Link href="/add">
+                    <CircleX className="h-4 w-4 text-red-500" />
+                  </Link>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {isOauth2DataLoading
+                ? "Checking installation status..."
+                : isUserInstalled
+                ? "Cleo is installed on your account and usable in any server or DM that supports external apps"
+                : "Cleo is not installed on your account. Tap to install Cleo on your account."}
+            </TooltipContent>
+          </Tooltip>
+          {/* Full pill on larger screens */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="hidden sm:flex px-3 py-1.5 gap-2 items-center justify-center rounded-full bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.12),transparent)] border border-border/60 cursor-pointer">
                 <p className="text-pretty text-sm font-medium">
                   User installed:
                 </p>
                 {isOauth2DataLoading ? (
                   <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
                 ) : isUserInstalled ? (
-                  <CircleCheck className="h-5 w-5 text-green-400" />
+                  <CircleCheck className="h-5 w-5 text-green-500" />
                 ) : (
                   <Link href="/add">
-                    <CircleX className="h-5 w-5 text-red-400" />
+                    <CircleX className="h-5 w-5 text-red-500" />
                   </Link>
                 )}
               </div>
@@ -113,22 +137,23 @@ const DashboardHomePage = () => {
           </Tooltip>
           <UserButton
             showName
+            appearance={{
+              elements: {
+                userButtonBox: { flexDirection: "row-reverse" },
+              },
+            }}
             userProfileMode="navigation"
             userProfileUrl="/dashboard/account"
           />
         </div>
       </header>
 
-      <section className="w-full max-w-4xl flex flex-col gap-6">
+      <section className="w-full max-w-6xl flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Your Servers</h2>
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => router.push("/add/server")}
-          >
-            <Plus className="h-5 w-5" />
-            Add Server
+          <h2 className="text-xl sm:text-2xl font-bold">Your Servers</h2>
+          <Button variant="gradient" onClick={() => router.push("/add/server")}>
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="hidden sm:inline">Add Server</span>
           </Button>
         </div>
         {isLoading ? (
@@ -136,24 +161,26 @@ const DashboardHomePage = () => {
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="aspect-square bg-gray-700 rounded-lg animate-pulse"
+                className="aspect-square rounded-lg border border-border/60 bg-card/60 animate-pulse"
               />
             ))}
           </div>
         ) : guilds && guilds.length > 0 ? (
           <ServerList servers={guilds} />
         ) : (
-          <div className="flex flex-col items-center justify-center p-4 gap-4">
-            <p>You have no servers yet. Let's add your first one!</p>
+          <div className="flex flex-col items-center justify-center p-6 gap-4 rounded-xl border border-border/60 bg-card/70 backdrop-blur">
+            <p className="text-muted-foreground">
+              You have no servers yet. Let's add your first one!
+            </p>
             <Button
-              variant="secondary"
-              className="h-20 w-20"
+              variant="gradient"
+              className="h-10 px-5"
               onClick={(e) => {
                 e.preventDefault();
                 router.push("/add/server");
               }}
             >
-              <Plus className="h-6 w-6" />
+              <Plus className="h-5 w-5" />
             </Button>
           </div>
         )}

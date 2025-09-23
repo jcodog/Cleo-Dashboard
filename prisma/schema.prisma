@@ -71,7 +71,7 @@ model Users {
     premiumServers       Servers[]
     cleoPersonalityName  String?
     cleoPersonalityId    String?
-    cleoPersonality      CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id])
+    cleoPersonality      CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id], onDelete: SetNull)
 }
 
 model Limits {
@@ -82,41 +82,51 @@ model Limits {
     additionalMessages  Int      @default(0)
     premiumServers      Int      @default(0)
     premiumServerLimmit Int      @default(0)
-    user                Users    @relation(fields: [id], references: [id])
+    user                Users    @relation(fields: [id], references: [id], onDelete: Cascade)
 }
 
 model Servers {
-    id                  String             @id
+    id                  String                @id
     name                String
     ownerId             String
     icon                String?
-    isPremium           Boolean            @default(false)
+    isPremium           Boolean               @default(false)
     premiumAddedBy      String?
-    premiumUser         Users?             @relation(fields: [premiumAddedBy], references: [discordId])
-    aiEnabled           Boolean            @default(false)
+    premiumUser         Users?                @relation(fields: [premiumAddedBy], references: [discordId], onDelete: SetNull)
+    aiEnabled           Boolean               @default(false)
     welcomeChannel      String?
     announcementChannel String?
     updatesChannel      String?
     logsChannel         String?
-    logLevel            LogLevel           @default(NONE)
+    logLevel            LogLevel              @default(NONE)
     inviteLink          String?
     inviteCode          String?
     lastOpened          DateTime?
     cleoPersonalityName String?
     cleoPersonalityId   String?
-    cleoPersonality     CleoPersonalities? @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id])
+    cleoPersonality     CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id], onDelete: SetNull)
     AutomodConfig       AutomodConfig[]
+    ServerSubscriptions ServerSubscriptions[]
 
     @@index([lastOpened])
 }
 
 model PremiumSubscriptions {
     id        String   @id
-    user      Users    @relation(fields: [id], references: [id])
+    user      Users    @relation(fields: [id], references: [id], onDelete: Cascade)
     tier      Plans
     startDate DateTime @default(now())
     endDate   DateTime @default(dbgenerated("CURRENT_TIMESTAMP + INTERVAL '1 month'"))
     source    Sources
+}
+
+model ServerSubscriptions {
+    id             String   @id
+    server         Servers  @relation(fields: [id], references: [id])
+    startDate      DateTime @default(now())
+    endDate        DateTime @default(dbgenerated("CURRENT_TIMESTAMP + INTERVAL '1 month'"))
+    source         Sources
+    subscriptionId String
 }
 
 model ErrorLog {
@@ -160,7 +170,7 @@ model Prices {
     amount    Int
     default   Boolean  @default(false)
     productId String
-    product   Products @relation(fields: [productId], references: [id])
+    product   Products @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model AutomodConfig {
@@ -172,5 +182,5 @@ model AutomodConfig {
     ignoredChannels String[] @default([])
     approvedLinks   String[] @default([])
     guildId         String   @unique
-    guild           Servers  @relation(fields: [guildId], references: [id])
+    guild           Servers  @relation(fields: [guildId], references: [id], onDelete: Cascade)
 }

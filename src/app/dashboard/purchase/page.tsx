@@ -13,7 +13,7 @@ const PurchasePage = async ({
   // Missing or invalid session id
   if (!sessionId || typeof sessionId !== "string") {
     return (
-      <main className="mx-auto max-w-xl px-6 py-14">
+      <main className="mx-auto max-w-xl px-6 py-14 rounded-xl border border-border/60 bg-card/70 backdrop-blur">
         <h1 className="text-2xl font-semibold">Purchase status</h1>
         <p className="mt-3 text-muted-foreground">
           We couldn’t find your checkout session. If you completed a payment,
@@ -40,7 +40,7 @@ const PurchasePage = async ({
     session = await stripe.checkout.sessions.retrieve(sessionId);
   } catch (err) {
     return (
-      <main className="mx-auto max-w-xl px-6 py-14">
+      <main className="mx-auto max-w-xl px-6 py-14 rounded-xl border border-border/60 bg-card/70 backdrop-blur">
         <h1 className="text-2xl font-semibold">Purchase status</h1>
         <p className="mt-3 text-destructive">
           We couldn’t verify your checkout session right now. This may be
@@ -77,7 +77,7 @@ const PurchasePage = async ({
   // Success: backend has handled the session
   if (handled) {
     return (
-      <main className="mx-auto max-w-xl px-6 py-14">
+      <main className="mx-auto max-w-xl px-6 py-14 rounded-xl border border-border/60 bg-card/70 backdrop-blur">
         <h1 className="text-2xl font-semibold">All set!</h1>
         <p className="mt-3 text-muted-foreground">
           Your purchase has been applied to your account. Thanks for supporting
@@ -98,7 +98,7 @@ const PurchasePage = async ({
   // Payment completed but backend not finished yet
   if (paymentStatus === "paid" && status === "complete") {
     return (
-      <main className="mx-auto max-w-xl px-6 py-14">
+      <main className="mx-auto max-w-xl px-6 py-14 rounded-xl border border-border/60 bg-card/70 backdrop-blur">
         <h1 className="text-2xl font-semibold">Processing your purchase…</h1>
         <p className="mt-3 text-muted-foreground">
           We’ve received your payment and are finalizing your upgrade. This
@@ -130,7 +130,7 @@ const PurchasePage = async ({
   // Open or unpaid session
   if (status === "open" || paymentStatus !== "paid") {
     return (
-      <main className="mx-auto max-w-xl px-6 py-14">
+      <main className="mx-auto max-w-xl px-6 py-14 rounded-xl border border-border/60 bg-card/70 backdrop-blur">
         <h1 className="text-2xl font-semibold">Checkout not completed</h1>
         <p className="mt-3 text-muted-foreground">
           It looks like your checkout wasn’t completed. If you already paid,
@@ -158,7 +158,7 @@ const PurchasePage = async ({
 
   // Fallback (expired or unknown state)
   return (
-    <main className="mx-auto max-w-xl px-6 py-14">
+    <main className="mx-auto max-w-xl px-6 py-14 rounded-xl border border-border/60 bg-card/70 backdrop-blur">
       <h1 className="text-2xl font-semibold">Purchase status</h1>
       <p className="mt-3 text-muted-foreground">
         We’re waiting for confirmation from our servers. You can refresh this

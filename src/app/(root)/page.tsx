@@ -1,4 +1,5 @@
 import { Heading } from "@/components/Heading";
+import { AmbientBackground } from "@/components/AmbientBackground";
 import { HeroButton } from "@/components/HeroButton";
 import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
@@ -13,31 +14,8 @@ import Link from "next/link";
 export default async function Home() {
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-x-hidden bg-black text-white">
-      {/* Ambient background: gradient grid + aurora + noise */}
-      <div
-        id="background-animations"
-        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-      >
-        {/* deep radial vignette */}
-        <div className="absolute inset-0 bg-[radial-gradient(1200px_800px_at_50%_-10%,rgba(99,102,241,0.25),transparent_60%),radial-gradient(900px_600px_at_90%_20%,rgba(236,72,153,0.18),transparent_60%),radial-gradient(800px_500px_at_10%_50%,rgba(16,185,129,0.14),transparent_60%)]" />
-        {/* subtle grid lines */}
-        <div className="absolute inset-0 opacity-20 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:48px_48px]" />
-        </div>
-        {/* animated aurora blobs */}
-        <div className="absolute -top-40 -left-32 h-[38rem] w-[38rem] rounded-full blur-3xl opacity-25 bg-gradient-to-tr from-fuchsia-500/40 via-purple-400/40 to-indigo-400/40 animate-[spin_60s_linear_infinite]" />
-        <div className="absolute -bottom-56 -right-44 h-[44rem] w-[44rem] rounded-full blur-3xl opacity-25 bg-gradient-to-br from-cyan-400/40 via-sky-400/30 to-emerald-400/30 animate-[spin_90s_linear_infinite]" />
-        {/* drifting pill highlights */}
-        <div className="absolute left-1/2 top-1/3 h-64 w-[42rem] -translate-x-1/2 -rotate-12 rounded-full bg-gradient-to-r from-transparent via-white/8 to-transparent blur-2xl" />
-        <div className="absolute left-1/3 top-2/3 h-56 w-[36rem] -translate-x-1/2 rotate-12 rounded-full bg-gradient-to-r from-transparent via-white/6 to-transparent blur-2xl" />
-        {/* film grain */}
-        <div
-          className="absolute inset-0 opacity-[0.08] mix-blend-soft-light [background-image:url('data:image/svg+xml;utf8,\
-          <svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 300 300\'>\
-          <filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'2\' stitchTiles=\'stitch\'/></filter>\
-          <rect width=\'100%\' height=\'100%\' filter=\'url(%23n)\' opacity=\'0.6\'/></svg>')]"
-        />
-      </div>
+      {/* Ambient background shared with app */}
+      <AmbientBackground variant="landing" />
 
       {/* Hero Section */}
       <div

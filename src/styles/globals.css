@@ -122,3 +122,32 @@
 @utility no-scrollbar {
   @apply [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
 }
+
+/* Reusable gentle float animation for ambient blobs */
+@keyframes floaty {
+  0% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+  25% {
+    transform: translateY(-10px) translateX(6px) scale(1.02);
+  }
+  50% {
+    transform: translateY(0px) translateX(0px) scale(1.01);
+  }
+  75% {
+    transform: translateY(8px) translateX(-6px) scale(0.99);
+  }
+  100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+}
+
+/* Always-available slow spin animation for ambient blobs */
+@keyframes slowspin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

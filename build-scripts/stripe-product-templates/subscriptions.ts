@@ -9,7 +9,7 @@ const serverPro: Stripe.ProductCreateParams = {
     recurring: {
       interval: "month",
     },
-    unit_amount: 499,
+    unit_amount: 999,
   },
   expand: ["default_price", "marketing_features"],
   marketing_features: [
