@@ -43,7 +43,7 @@ export async function getDiscordAccessToken(opts: {
         remainingMs: remaining,
       });
     } else {
-      console.debug?.("[discordToken] token valid", { userId });
+      console.debug("[discordToken] token valid", { userId });
     }
     return account.accessToken as string;
   }
