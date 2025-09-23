@@ -16,16 +16,17 @@ import { getDiscordAccessToken } from "@/lib/betterAuth/discordToken";
 
 export const discordRouter = j.router({
   getUserGuilds: authProcedure.query(
-    async ({ c, ctx }: { c: any; ctx: { session: any; db: any } }) => {
+    async ({ c, ctx }) => {
       const { session, db } = ctx;
+      const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET } = env(c)
       const userId: string = session.user.id;
       let accessToken: string;
       try {
         accessToken = await getDiscordAccessToken({
           db,
           userId,
-          clientId: process.env.DISCORD_CLIENT_ID || "",
-          clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
+          clientId: DISCORD_CLIENT_ID || "",
+          clientSecret: DISCORD_CLIENT_SECRET || "",
         });
       } catch (e: any) {
         return c.json({ guilds: null, message: e.message || "Token error" });
@@ -90,16 +91,17 @@ export const discordRouter = j.router({
   }),
 
   getOauth2Data: authProcedure.query(
-    async ({ c, ctx }: { c: any; ctx: { session: any; db: any } }) => {
+    async ({ c, ctx }) => {
       const { session, db } = ctx;
+      const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET } = env(c)
       const userId: string = session.user.id;
       let accessToken: string;
       try {
         accessToken = await getDiscordAccessToken({
           db,
           userId,
-          clientId: process.env.DISCORD_CLIENT_ID || "",
-          clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
+          clientId: DISCORD_CLIENT_ID || "",
+          clientSecret: DISCORD_CLIENT_SECRET || "",
         });
       } catch (e: any) {
         return c.json({
@@ -206,15 +208,15 @@ export const discordRouter = j.router({
       ctx: { session: any; db: any; kv: KVNamespace };
     }) => {
       const { session, db, kv } = ctx;
-      const { DISCORD_BOT_TOKEN } = env(c);
+      const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN } = env(c)
       const userId: string = session.user.id;
       let accessToken: string;
       try {
         accessToken = await getDiscordAccessToken({
           db,
           userId,
-          clientId: process.env.DISCORD_CLIENT_ID || "",
-          clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
+          clientId: DISCORD_CLIENT_ID || "",
+          clientSecret: DISCORD_CLIENT_SECRET || "",
         });
       } catch (e: any) {
         return c.json({
@@ -323,15 +325,15 @@ export const discordRouter = j.router({
       }) => {
         const { db, session } = ctx;
         const { guildId, channelId } = input;
-        const { DISCORD_BOT_TOKEN } = env(c);
+        const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN } = env(c)
         const userId: string = session.user.id;
         let accessToken: string;
         try {
           accessToken = await getDiscordAccessToken({
             db,
             userId,
-            clientId: process.env.DISCORD_CLIENT_ID || "",
-            clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
+            clientId: DISCORD_CLIENT_ID || "",
+            clientSecret: DISCORD_CLIENT_SECRET || "",
           });
         } catch (e: any) {
           return c.json({
