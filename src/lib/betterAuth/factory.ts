@@ -75,10 +75,7 @@ export const createAuth = (env: AuthEnv) => {
     cookies: {
       domain:
         process.env.NODE_ENV === "production"
-          ? env.COOKIE_DOMAIN ||
-            (env.NEXT_PUBLIC_SITE_URL
-              ? safeHostname(env.NEXT_PUBLIC_SITE_URL)
-              : undefined)
+          ? env.COOKIE_DOMAIN
           : undefined,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
