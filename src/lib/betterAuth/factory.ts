@@ -24,18 +24,82 @@ export type AuthEnv = {
 export const createAuth = (env: AuthEnv) => {
   const db = getDb(env.DATABASE_URL ?? "");
 
+  // --- Cookie Domain Normalisation ---------------------------------------
+  // Goal: share auth cookies between cleoai.cloud (Next) and api.cleoai.cloud (Workers).
+  // Requirements for the Set-Cookie header to be accepted & sent cross‑subdomain:
+  //  - Domain MUST be the registrable domain (e.g. `cleoai.cloud`) – NOT a subdomain, NOT include protocol, NOT include port.
+  //  - Secure MUST be true on production (HTTPS).
+  //  - SameSite can stay "lax" because subdomains count as same‑site; do NOT use default host‑only cookie.
+  // If COOKIE_DOMAIN is misconfigured we attempt to repair and emit a console.warn once.
+  let normalizedCookieDomain: string | undefined;
+  if (process.env.NODE_ENV === "production") {
+    const warned: string[] = [];
+    const raw = (env.COOKIE_DOMAIN || "").trim();
+
+    if (raw) {
+      // Strip protocol
+      let d: string = raw.replace(/^https?:\/\//i, "");
+      // Remove path/query if accidentally provided (avoid array indexing to satisfy noUncheckedIndexedAccess)
+      const firstSlash = d.indexOf("/");
+      if (firstSlash !== -1) d = d.slice(0, firstSlash);
+      // Remove port if present
+      const firstColon = d.indexOf(":");
+      if (firstColon !== -1) d = d.slice(0, firstColon);
+      // Convert leading dot variants to plain
+      d = d.replace(/^\.+/, "");
+      // Validate basic shape – must contain a dot and only allowed characters
+      if (!/^[A-Za-z0-9.-]+$/.test(d) || !d.includes(".")) {
+        warned.push(
+          `Provided COOKIE_DOMAIN '${raw}' is invalid; expected e.g. 'cleoai.cloud'.`
+        );
+      } else {
+        normalizedCookieDomain = d;
+      }
+    }
+
+    // Derive from NEXT_PUBLIC_SITE_URL if still undefined
+    if (!normalizedCookieDomain && env.NEXT_PUBLIC_SITE_URL) {
+      try {
+        const u = new URL(env.NEXT_PUBLIC_SITE_URL);
+        const host = u.hostname; // already no protocol
+        // If host is a bare domain (e.g. cleoai.cloud) keep it, else strip first label (api., www.)
+        const parts = host.split(".");
+        if (parts.length > 2) {
+          normalizedCookieDomain = parts.slice(-2).join(".");
+        } else {
+          normalizedCookieDomain = host;
+        }
+      } catch (e) {
+        warned.push("Could not derive cookie domain from NEXT_PUBLIC_SITE_URL");
+      }
+    }
+
+    if (
+      normalizedCookieDomain &&
+      normalizedCookieDomain.startsWith("localhost")
+    ) {
+      // Never set a Domain attribute for localhost – browsers reject/ignore it and host-only behaviour is desired.
+      warned.push(
+        `Omitting Domain attribute for localhost ('${normalizedCookieDomain}'); cross-subdomain sharing is not needed in local dev.`
+      );
+      normalizedCookieDomain = undefined;
+    }
+
+    if (warned.length) {
+      // Log once (Better Auth creates singleton) – aids debugging mis-config quickly in Cloudflare/Vercel logs.
+      console.warn("[auth:cookies]", warned.join(" "));
+    }
+  }
+
   return betterAuth({
     secret: env.BETTER_AUTH_SECRET ?? "",
     database: prismaAdapter(db, { provider: "postgresql" }),
-    emailAndPassword: {
-      enabled: false,
-    },
+    emailAndPassword: { enabled: false },
     socialProviders: {
       discord: {
         enabled: true,
         clientId: env.DISCORD_CLIENT_ID ?? "",
         clientSecret: env.DISCORD_CLIENT_SECRET ?? "",
-        // requesting identify + guilds so later API calls can work similarly to Clerk flow
         scope: [
           "identify",
           "email",
@@ -50,39 +114,26 @@ export const createAuth = (env: AuthEnv) => {
           global_name?: string;
           username?: string;
           avatar?: string | null;
-        }) => {
-          // Standardize the profile mapping so we can later create/sync user records.
-          // better-auth expects { id, email, name, image } at minimum.
-          return {
-            id: profile.id,
-            email: profile.email,
-            name: profile.global_name || profile.username,
-            image: profile.avatar
-              ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png?size=256`
-              : undefined,
-            username: profile.username,
-            raw: profile,
-          };
-        },
+        }) => ({
+          id: profile.id,
+          email: profile.email,
+          name: profile.global_name || profile.username,
+          image: profile.avatar
+            ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png?size=256`
+            : undefined,
+          username: profile.username,
+          raw: profile,
+        }),
       },
     },
-    // baseURL should match the origin the app is served from (no trailing slash)
     baseURL: env.NEXT_PUBLIC_SITE_URL ?? "https://cleoai.cloud",
-    // IMPORTANT: For cookies do NOT include protocol. Only set a domain when you need
-    // cross-subdomain sharing in production. In local dev you typically omit domain so
-    // the browser uses the current host (localhost). A wrong domain (or including https://)
-    // prevents the cookie from being set, leading to infinite redirect-to-sign-in loops.
     cookies: {
-      domain:
-        process.env.NODE_ENV === "production"
-          ? env.COOKIE_DOMAIN
-          : undefined,
+      domain: normalizedCookieDomain,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
     },
     events: {
       user: {
-        // Runs after a Better Auth User + Account rows are persisted.
         created: async ({
           user,
         }: {
@@ -94,21 +145,14 @@ export const createAuth = (env: AuthEnv) => {
           };
         }) => {
           try {
-            // 'db' here is the prisma client passed through the adapter.
             const prisma = db;
-
-            // If already provisioned (re-entrancy / retries), exit early.
             const existing = await prisma.users.findFirst({
               where: { extId: user.id },
             });
             if (existing) return;
-
-            // Fetch discord account (all sign-ups are via Discord per requirements)
             const discordAccount = await prisma.account.findFirst({
               where: { userId: user.id, providerId: "discord" },
             });
-
-            // Claim scenario: user previously existed (Clerk era) with discordId but extId referencing Clerk user.
             if (discordAccount?.accountId) {
               const claimant = await prisma.users
                 .findUnique({ where: { discordId: discordAccount.accountId } })
@@ -118,19 +162,15 @@ export const createAuth = (env: AuthEnv) => {
                   where: { discordId: discordAccount.accountId },
                   data: { extId: user.id, email: claimant.email || user.email },
                 });
-                return; // Claimed; no new row needed.
+                return;
               }
             }
-
-            // Prepare initial username: prefer mapped username (mapProfile sets username in raw?) or fallback.
             const baseUsername =
               user.username ||
               user.name ||
               (user.email
                 ? user.email.split("@")[0]
                 : `user_${user.id.slice(0, 6)}`);
-
-            // Ensure uniqueness for username if collisions possible.
             let username = baseUsername;
             let collision = await prisma.users
               .findUnique({ where: { username } })
@@ -145,10 +185,6 @@ export const createAuth = (env: AuthEnv) => {
                 .catch(() => null);
               attempt++;
             }
-
-            // Create Stripe customer later (defer heavy operations) – placeholder.
-            // If you need it immediately, inject a stripe instance and create here.
-
             await prisma.users.create({
               data: {
                 extId: user.id,

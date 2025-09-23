@@ -62,8 +62,27 @@ DISCORD_BOT_TOKEN=
 STRIPE_SECRET_KEY=
 STRIPE_PUBLIC_KEY=
 NEXT_PUBLIC_SITE_URL=
-COOKIE_DOMAIN=
+# COOKIE_DOMAIN only in production and without protocol/port, e.g.
+# COOKIE_DOMAIN=cleoai.cloud
+# (omit entirely in local dev; never use localhost or include https://)
 ```
+
+### Auth Cookie Domain (Important)
+
+To share Better Auth cookies between the frontend at `https://cleoai.cloud` and the API at `https://api.cleoai.cloud` you must:
+
+1. Set `COOKIE_DOMAIN=cleoai.cloud` (exact registrable domain; no protocol, no port) in production environments (Vercel + Cloudflare Worker env).
+2. Ensure `NEXT_PUBLIC_SITE_URL` matches the browser origin of the Next.js app (e.g. `https://cleoai.cloud`).
+3. Do NOT set `COOKIE_DOMAIN` for localhost development. Browsers reject a Domain attribute containing `localhost`; the code auto‑omits it when detected.
+4. Keep `sameSite=lax` (safe and still sends cookies to the subdomain). `secure` is automatically enforced in production.
+
+If the domain is misconfigured (e.g. includes `https://`, a port, or a subdomain like `api.cleoai.cloud`) the auth factory logs a warning: `[auth:cookies] ...` in server logs and falls back to a safer behavior to avoid completely losing login capability.
+
+Verify after deploy:
+
+- Inspect any Better Auth session cookie in DevTools → Application → Cookies → https://cleoai.cloud
+- It should show `Domain=.cleoai.cloud` (browser may display without leading dot) and `Secure ✓`, `SameSite Lax`.
+- Requests from the browser to `https://api.cleoai.cloud` should now include that cookie automatically.
 
 ## Coding Conventions
 
