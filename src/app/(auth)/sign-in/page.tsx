@@ -1,12 +1,12 @@
 "use client";
 import { authClient } from "@/lib/authClient";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import DiscordAuthButton from "@/components/auth/DiscordAuthButton";
 
-export default function SignInPage() {
+function SignInInner() {
   const { useSession } = authClient;
   const { data: session, isPending } = useSession();
   const router = useRouter();
@@ -107,5 +107,20 @@ export default function SignInPage() {
         </p>
       </div>
     </section>
+  );
+}
+
+export default function SignInPage() {
+  // Wrap inner component that uses useSearchParams in Suspense per Next.js 15 requirement
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-1 items-center justify-center p-8 text-xs text-muted-foreground">
+          Loading...
+        </div>
+      }
+    >
+      <SignInInner />
+    </Suspense>
   );
 }
