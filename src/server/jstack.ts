@@ -12,7 +12,6 @@ export interface Env {
     DATABASE_URL: string;
     DISCORD_CLIENT_ID: string;
     DISCORD_CLIENT_SECRET: string;
-    // Removed Clerk keys after migration
     DISCORD_BOT_TOKEN: string;
     CLEO_API_KEY: string;
     CLEO_KV: KVNamespace;
