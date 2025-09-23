@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "postinstall": "prisma db push --skip-generate && prisma generate --no-engine && tsx ./build-scripts/seed-stripe.ts",
     "seed-stripe": "tsx ./build-scripts/seed-stripe.ts"
   },
@@ -48,6 +48,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250923.0",
+    "@eslint/eslintrc": "^3.3.1",
     "@types/node": "^24.5.2",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",

@@ -50,10 +50,7 @@ const RefreshButton = ({ sessionId }: { sessionId: string }) => (
 const PurchasePage = async ({
   searchParams,
 }: {
-  // Keep compatibility with current usage (Promise) but allow object
-  searchParams:
-    | Promise<{ [key: string]: string | string[] | undefined }>
-    | { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) => {
   const params = await searchParams; // works if plain object too
   const sessionId = params?.session_id as string | undefined;
