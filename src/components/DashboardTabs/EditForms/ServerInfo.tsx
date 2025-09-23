@@ -17,17 +17,13 @@ interface ServerInfoProps {
   isDirty: boolean;
   setDirtyAction: Dispatch<SetStateAction<boolean>>;
 }
-export const ServerInfo = ({
-  apiGuild,
-  isDirty,
-  setDirtyAction,
-}: ServerInfoProps) => {
+export const ServerInfo = ({ apiGuild, setDirtyAction }: ServerInfoProps) => {
   const initialName = apiGuild.name || "";
   const initialDescription = apiGuild.description ?? "";
   const [name, setName] = useState<string>(initialName);
   const [description, setDescription] = useState<string>(initialDescription);
 
-  const [invite, setInvite] = useState<string | undefined>();
+  // invite feature not yet implemented
   const queryClient = useQueryClient();
 
   const { data, isPending, error, mutate } = useMutation({
@@ -65,7 +61,7 @@ export const ServerInfo = ({
     if (error) {
       toast.error(error.message);
     }
-  }, [data, error]);
+  }, [data, error, queryClient, setDirtyAction]);
 
   useEffect(() => {
     setName(apiGuild.name || "");

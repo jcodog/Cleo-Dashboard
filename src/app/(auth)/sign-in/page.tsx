@@ -43,23 +43,28 @@ export default function SignInPage() {
   const handleDiscord = useCallback(async () => {
     if (loading) return;
     setLoading(true);
-    let safetyTimer: any;
+    let safetyTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       safetyTimer = setTimeout(() => {
         setLoading(false);
         toast.error("Taking longer than expected. Please try again.");
       }, 6000);
       await authClient.signIn.social({ provider: "discord" });
+      // Allow the OAuth popup flow time before redirecting if still on page
       setTimeout(() => {
         if (loading) {
           router.push(redirectParam || "/dashboard");
         }
       }, 4000);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setLoading(false);
-      toast.error(e?.message || "Failed to start Discord sign-in");
+      const message =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : "Failed to start Discord sign-in";
+      toast.error(message || "Failed to start Discord sign-in");
     } finally {
-      clearTimeout(safetyTimer);
+      if (safetyTimer) clearTimeout(safetyTimer);
     }
   }, [loading, redirectParam, router]);
 

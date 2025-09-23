@@ -225,8 +225,12 @@ export default function DashboardAccountPage() {
                     } else {
                       toast.error(json.error || "Failed to update");
                     }
-                  } catch (err: any) {
-                    toast.error(err?.message || "Update failed");
+                  } catch (err: unknown) {
+                    const message =
+                      typeof err === "object" && err && "message" in err
+                        ? String((err as { message?: unknown }).message)
+                        : "Update failed";
+                    toast.error(message);
                   } finally {
                     setSaving(false);
                   }

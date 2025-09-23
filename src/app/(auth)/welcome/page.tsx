@@ -4,8 +4,8 @@ import { Heading } from "@/components/Heading";
 import { Button } from "@/components/ui/button";
 import { client } from "@/lib/client";
 // import Users type no longer needed
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowRight, CloudUpload, Loader } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BsCloudCheck } from "react-icons/bs";

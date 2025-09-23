@@ -29,7 +29,9 @@ export async function middleware(req: NextRequest) {
   }
 
   // Optimistic cookie-based check
-  let cookieSession = await getCookieCache(req);
+  let cookieSession = (await getCookieCache(req)) as {
+    session?: { id: string };
+  } | null;
 
   // If cookie cache missing, attempt an authoritative lightweight session fetch once.
   // (This helps immediately after OAuth callback when cookies were just set.)
@@ -37,9 +39,9 @@ export async function middleware(req: NextRequest) {
     try {
       const full = await auth.api.getSession({ headers: req.headers });
       if (full) {
-        cookieSession = { session: { id: full.session.id } } as any;
+        cookieSession = { session: { id: full.session.id } };
       }
-    } catch (err) {
+    } catch {
       // swallow; we'll treat as unauthenticated below
     }
   }
@@ -81,7 +83,7 @@ export async function middleware(req: NextRequest) {
       if (domainUser?.role !== "staff") {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
-    } catch (e) {
+    } catch {
       // On any error, fail closed to sign-in
       const signInUrl = new URL("/sign-in", req.url);
       signInUrl.searchParams.set(

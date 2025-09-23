@@ -25,9 +25,9 @@ const AddPage = () => {
   useEffect(() => {
     if (generatedUrl && generatedUrl.url) {
       router.push("/dashboard");
-      window.open(generatedUrl.url, "_blank")!.focus();
+      window.open(generatedUrl.url, "_blank")?.focus();
     }
-  }, [generatedUrl]);
+  }, [generatedUrl, router]);
 
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-8 max-w-3xl">

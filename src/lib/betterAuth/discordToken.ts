@@ -17,7 +17,7 @@ export async function getDiscordAccessToken(opts: {
 }): Promise<string> {
   const { db, userId, clientId, clientSecret } = opts;
 
-  const account = await (db as any).account.findFirst({
+  const account = await (db as PrismaClient).account.findFirst({
     where: { userId, providerId: "discord" },
   });
 
@@ -94,7 +94,7 @@ export async function getDiscordAccessToken(opts: {
   const expiresInMs = (json.expires_in ?? 3600) * 1000;
   const newExpiry = new Date(Date.now() + expiresInMs);
 
-  await (db as any).account.update({
+  await (db as PrismaClient).account.update({
     where: { id: account.id },
     data: {
       accessToken: newAccessToken,

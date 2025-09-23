@@ -38,7 +38,7 @@ export default function SignUpPage() {
   const handleDiscord = useCallback(async () => {
     if (loading) return;
     setLoading(true);
-    let safetyTimer: any;
+    let safetyTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       safetyTimer = setTimeout(() => {
         setLoading(false);
@@ -50,11 +50,15 @@ export default function SignUpPage() {
           router.push(redirectParam || "/dashboard");
         }
       }, 4000);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setLoading(false);
-      toast.error(e?.message || "Failed to start Discord sign-up");
+      const message =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : "Failed to start Discord sign-up";
+      toast.error(message || "Failed to start Discord sign-up");
     } finally {
-      clearTimeout(safetyTimer);
+      if (safetyTimer) clearTimeout(safetyTimer);
     }
   }, [loading, redirectParam, router]);
 

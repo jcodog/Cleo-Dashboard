@@ -12,7 +12,7 @@ export const healthRouter = j.router({
    * Lightweight session probe (no discord fetch) – validates Better Auth session only.
    */
   session: authProcedure.query(async ({ c, ctx }) => {
-    const { session } = ctx as any;
+    const { session } = ctx;
     return c.json({
       ok: true,
       user: { id: session.user.id, email: session.user.email },
@@ -24,8 +24,8 @@ export const healthRouter = j.router({
    * Deep linkage probe – requires dash auth (domain user) and validates discord token & id sync.
    */
   discord: dashProcedure.query(async ({ c, ctx }) => {
-    const { db, user } = ctx as any; // user is domain user from dashMiddleware
-    const betterAuthUserId: string = ctx.session.user.id;
+    const { db, user, session } = ctx;
+    const betterAuthUserId: string = session.user.id;
 
     // Acquire (refresh if needed) discord access token
     let accessToken: string | null = null;
@@ -38,8 +38,12 @@ export const healthRouter = j.router({
         clientSecret: env(c).DISCORD_CLIENT_SECRET,
       });
       tokenStatus = "valid";
-    } catch (err: any) {
-      tokenStatus = "error:" + (err?.message || "token failure");
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" && err && "message" in err
+          ? String((err as { message?: unknown }).message)
+          : "token failure";
+      tokenStatus = "error:" + message;
     }
 
     let discordUser: RESTGetAPIUserResult | null = null;

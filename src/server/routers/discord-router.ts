@@ -1,9 +1,4 @@
-import {
-  authProcedure,
-  dashProcedure,
-  j,
-  publicProcedure,
-} from "@/server/jstack";
+import { authProcedure, j, publicProcedure } from "@/server/jstack";
 import {
   RESTGetAPICurrentUserGuildsResult,
   RESTGetAPIGuildChannelsResult,
@@ -15,51 +10,52 @@ import { z } from "zod";
 import { getDiscordAccessToken } from "@/lib/betterAuth/discordToken";
 
 export const discordRouter = j.router({
-  getUserGuilds: authProcedure.query(
-    async ({ c, ctx }) => {
-      const { session, db } = ctx;
-      const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET } = env(c)
-      const userId: string = session.user.id;
-      let accessToken: string;
-      try {
-        accessToken = await getDiscordAccessToken({
-          db,
-          userId,
-          clientId: DISCORD_CLIENT_ID || "",
-          clientSecret: DISCORD_CLIENT_SECRET || "",
-        });
-      } catch (e: any) {
-        return c.json({ guilds: null, message: e.message || "Token error" });
-      }
-
-      const response = await fetch(
-        "https://discord.com/api/v10/users/@me/guilds",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!response.ok)
-        return c.json({ guilds: null, message: response.statusText });
-
-      const guilds =
-        (await response.json()) as RESTGetAPICurrentUserGuildsResult;
-
-      if (!guilds || guilds.length < 1)
-        return c.json({
-          guilds: null,
-          message: "No guilds found for user",
-        });
-
-      return c.json({ guilds, message: "Retrieved guilds" });
+  getUserGuilds: authProcedure.query(async ({ c, ctx }) => {
+    const { session, db } = ctx;
+    const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET } = env(c);
+    const userId: string = session.user.id;
+    let accessToken: string;
+    try {
+      accessToken = await getDiscordAccessToken({
+        db,
+        userId,
+        clientId: DISCORD_CLIENT_ID || "",
+        clientSecret: DISCORD_CLIENT_SECRET || "",
+      });
+    } catch (e: unknown) {
+      const message =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : "Token error";
+      return c.json({ guilds: null, message });
     }
-  ),
 
-  getBotGuilds: publicProcedure.query(async ({ c, input }) => {
+    const response = await fetch(
+      "https://discord.com/api/v10/users/@me/guilds",
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok)
+      return c.json({ guilds: null, message: response.statusText });
+
+    const guilds = (await response.json()) as RESTGetAPICurrentUserGuildsResult;
+
+    if (!guilds || guilds.length < 1)
+      return c.json({
+        guilds: null,
+        message: "No guilds found for user",
+      });
+
+    return c.json({ guilds, message: "Retrieved guilds" });
+  }),
+
+  getBotGuilds: publicProcedure.query(async ({ c }) => {
     const { DISCORD_BOT_TOKEN } = env(c);
     const response = await fetch(
       "https://discord.com/api/v10/users/@me/guilds",
@@ -90,55 +86,54 @@ export const discordRouter = j.router({
     });
   }),
 
-  getOauth2Data: authProcedure.query(
-    async ({ c, ctx }) => {
-      const { session, db } = ctx;
-      const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET } = env(c)
-      const userId: string = session.user.id;
-      let accessToken: string;
-      try {
-        accessToken = await getDiscordAccessToken({
-          db,
-          userId,
-          clientId: DISCORD_CLIENT_ID || "",
-          clientSecret: DISCORD_CLIENT_SECRET || "",
-        });
-      } catch (e: any) {
-        return c.json({
-          currentOauth2Data: null,
-          message: e.message || "Token error",
-        });
-      }
-
-      const response = await fetch("https://discord.com/api/v10/oauth2/@me", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
+  getOauth2Data: authProcedure.query(async ({ c, ctx }) => {
+    const { session, db } = ctx;
+    const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET } = env(c);
+    const userId: string = session.user.id;
+    let accessToken: string;
+    try {
+      accessToken = await getDiscordAccessToken({
+        db,
+        userId,
+        clientId: DISCORD_CLIENT_ID || "",
+        clientSecret: DISCORD_CLIENT_SECRET || "",
       });
-
-      if (!response.ok)
-        return c.json({
-          currentOauth2Data: null,
-          message: response.statusText,
-        });
-
-      const data =
-        (await response.json()) as RESTGetAPIOAuth2CurrentAuthorizationResult;
-
-      if (!data)
-        return c.json({
-          currentOauth2Data: null,
-          message: "No current Oauth2 data recieved",
-        });
-
-      return c.json({
-        currentOauth2Data: data,
-        message: "Current Oauth2 data retrieved",
-      });
+    } catch (e: unknown) {
+      const message =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : "Token error";
+      return c.json({ currentOauth2Data: null, message });
     }
-  ),
+
+    const response = await fetch("https://discord.com/api/v10/oauth2/@me", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok)
+      return c.json({
+        currentOauth2Data: null,
+        message: response.statusText,
+      });
+
+    const data =
+      (await response.json()) as RESTGetAPIOAuth2CurrentAuthorizationResult;
+
+    if (!data)
+      return c.json({
+        currentOauth2Data: null,
+        message: "No current Oauth2 data recieved",
+      });
+
+    return c.json({
+      currentOauth2Data: data,
+      message: "Current Oauth2 data retrieved",
+    });
+  }),
 
   addCleo: authProcedure
     .input(
@@ -148,67 +143,58 @@ export const discordRouter = j.router({
         discordId: z.string().optional(),
       })
     )
-    .mutation(
-      async ({
-        c,
-        ctx,
-        input,
-      }: {
-        c: any;
-        ctx: { session: any; kv: KVNamespace };
-        input: any;
-      }) => {
-        const { mode, guildId, discordId } = input;
-        const { session, kv } = ctx;
-        const userId: string = session.user.id;
-        if (!userId)
-          return c.json({
-            success: false,
-            message: "Unauthenticated user",
-            url: null,
-          });
-
-        if (mode === "server" && !guildId) {
-          return c.json({
-            success: false,
-            message: "Missing the guildId needed to add to server",
-            url: null,
-          });
-        }
-
-        if (mode === "server" && guildId && discordId) {
-          await kv.put(`onboarding-guild-${discordId}`, guildId);
-        }
-
-        const generateUrl = () => {
-          const baseUrl =
-            "https://discord.com/oauth2/authorize?client_id=1223326305169182740";
-          const permissionsAndScopes =
-            mode === "server"
-              ? `&permissions=593182191516919&integration_type=0&scope=bot&disable_guild_select=true&guild_id=${guildId}`
-              : "&permissions=593182191516919&integration_type=1&scope=bot";
-
-          return baseUrl + permissionsAndScopes;
-        };
-
+    .mutation(async ({ c, ctx, input }) => {
+      const { session, kv } = ctx as {
+        session: { user: { id: string } };
+        kv: KVNamespace;
+      };
+      const { mode, guildId, discordId } = input as {
+        mode: "user" | "server";
+        guildId?: string;
+        discordId?: string;
+      };
+      const userId: string = session.user.id;
+      if (!userId)
         return c.json({
-          success: true,
-          message: "Cleo invite url generate",
-          url: generateUrl(),
+          success: false,
+          message: "Unauthenticated user",
+          url: null,
+        });
+
+      if (mode === "server" && !guildId) {
+        return c.json({
+          success: false,
+          message: "Missing the guildId needed to add to server",
+          url: null,
         });
       }
-    ),
+
+      if (mode === "server" && guildId && discordId) {
+        await kv.put(`onboarding-guild-${discordId}`, guildId);
+      }
+
+      const generateUrl = () => {
+        const baseUrl =
+          "https://discord.com/oauth2/authorize?client_id=1223326305169182740";
+        const permissionsAndScopes =
+          mode === "server"
+            ? `&permissions=593182191516919&integration_type=0&scope=bot&disable_guild_select=true&guild_id=${guildId}`
+            : "&permissions=593182191516919&integration_type=1&scope=bot";
+
+        return baseUrl + permissionsAndScopes;
+      };
+
+      return c.json({
+        success: true,
+        message: "Cleo invite url generate",
+        url: generateUrl(),
+      });
+    }),
 
   getOnboardingGuildChannels: authProcedure.query(
-    async ({
-      c,
-      ctx,
-    }: {
-      c: any;
-      ctx: { session: any; db: any; kv: KVNamespace };
-    }) => {
-      const { session, db, kv } = ctx;
-      const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN } = env(c)
+    async ({ c, ctx: { session, db, kv } }) => {
+      const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN } =
+        env(c);
       const userId: string = session.user.id;
       let accessToken: string;
       try {
@@ -218,11 +204,14 @@ export const discordRouter = j.router({
           clientId: DISCORD_CLIENT_ID || "",
           clientSecret: DISCORD_CLIENT_SECRET || "",
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         return c.json({
           channels: null,
           guildId: null,
-          message: e.message || "Token error",
+          message:
+            typeof e === "object" && e && "message" in e
+              ? String((e as { message?: unknown }).message)
+              : "Token error",
         });
       }
 
@@ -313,106 +302,122 @@ export const discordRouter = j.router({
         channelId: z.string(),
       })
     )
-    .mutation(
-      async ({
-        c,
-        ctx,
-        input,
-      }: {
-        c: any;
-        ctx: { db: any; session: any };
-        input: { guildId: string; channelId: string };
-      }) => {
-        const { db, session } = ctx;
-        const { guildId, channelId } = input;
-        const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN } = env(c)
-        const userId: string = session.user.id;
-        let accessToken: string;
-        try {
-          accessToken = await getDiscordAccessToken({
-            db,
-            userId,
-            clientId: DISCORD_CLIENT_ID || "",
-            clientSecret: DISCORD_CLIENT_SECRET || "",
-          });
-        } catch (e: any) {
-          return c.json({
-            configured: false,
-            message: e.message || "Token error",
-          });
-        }
+    .mutation(async ({ c, ctx, input }) => {
+      const { db, session } = ctx as {
+        db: {
+          users: {
+            findUnique: (args: {
+              where: { discordId: string };
+            }) => Promise<{ id: string } | null>;
+          };
+          servers: {
+            create: (args: {
+              data: {
+                id: string;
+                name: string;
+                ownerId: string;
+                updatesChannel: string;
+              };
+            }) => Promise<{ id: string } | null>;
+          };
+        };
+        session: { user: { id: string } };
+      };
+      const { guildId, channelId } = input as {
+        guildId: string;
+        channelId: string;
+      };
+      const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN } =
+        env(c);
+      const userId: string = session.user.id;
+      let accessToken: string;
+      try {
+        accessToken = await getDiscordAccessToken({
+          db,
+          userId,
+          clientId: DISCORD_CLIENT_ID || "",
+          clientSecret: DISCORD_CLIENT_SECRET || "",
+        });
+      } catch (e: unknown) {
+        return c.json({
+          configured: false,
+          message:
+            typeof e === "object" && e && "message" in e
+              ? String((e as { message?: unknown }).message)
+              : "Token error",
+        });
+      }
 
-        const response = await fetch("https://discord.com/api/v10/oauth2/@me", {
+      const response = await fetch("https://discord.com/api/v10/oauth2/@me", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok)
+        return c.json({
+          configured: false,
+          message: response.statusText,
+        });
+
+      const data =
+        (await response.json()) as RESTGetAPIOAuth2CurrentAuthorizationResult;
+
+      if (!data)
+        return c.json({
+          configured: false,
+          message: "No current Oauth2 data recieved",
+        });
+
+      const discordId = data.user?.id;
+
+      if (!discordId)
+        return c.json({
+          configured: false,
+          message: "No discord user id found",
+        });
+
+      const guild = (await (
+        await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
           },
+        })
+      ).json()) as RESTGetAPIGuildResult;
+
+      if (!guild)
+        return c.json({
+          configured: false,
+          message: "No guild with that id found",
         });
 
-        if (!response.ok)
-          return c.json({
-            configured: false,
-            message: response.statusText,
-          });
+      const user = await db.users.findUnique({ where: { discordId } });
 
-        const data =
-          (await response.json()) as RESTGetAPIOAuth2CurrentAuthorizationResult;
-
-        if (!data)
-          return c.json({
-            configured: false,
-            message: "No current Oauth2 data recieved",
-          });
-
-        const discordId = data.user?.id;
-
-        if (!discordId)
-          return c.json({
-            configured: false,
-            message: "No discord user id found",
-          });
-
-        const guild = (await (
-          await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
-            },
-          })
-        ).json()) as RESTGetAPIGuildResult;
-
-        if (!guild)
-          return c.json({
-            configured: false,
-            message: "No guild with that id found",
-          });
-
-        const user = await db.users.findUnique({ where: { discordId } });
-
-        if (!user)
-          return c.json({
-            configured: false,
-            message: "User does not exist in db",
-          });
-
-        const configuredGuild = await db.servers.create({
-          data: {
-            id: guild.id,
-            name: guild.name,
-            ownerId: guild.owner_id,
-            updatesChannel: channelId,
-          },
+      if (!user)
+        return c.json({
+          configured: false,
+          message: "User does not exist in db",
         });
 
-        if (!configuredGuild)
-          return c.json({
-            configured: false,
-            message: "Error creating and configuring the guild",
-          });
+      const configuredGuild = await db.servers.create({
+        data: {
+          id: guild.id,
+          name: guild.name,
+          ownerId: guild.owner_id,
+          updatesChannel: channelId,
+        },
+      });
 
-        return c.json({ configured: true, message: "Guild configured" });
-      }
-    ),
+      if (!configuredGuild)
+        return c.json({
+          configured: false,
+          message: "Error creating and configuring the guild",
+        });
+
+      return c.json({ configured: true, message: "Guild configured" });
+    }),
 });

@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { client } from "@/lib/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Permissions, Snowflake } from "discord-api-types/globals";
-import { GuildFeature } from "discord-api-types/v10";
+// Removed unused GuildFeature import
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -108,8 +108,8 @@ const AddServerPage = () => {
       <div className="flex flex-col items-center justify-center gap-2 text-pretty text-center">
         <Heading className="text-6xl">Add Cleo to your server</Heading>
         <p>
-          Let's get started adding cleo to your server, this will be the start
-          of your amazing journey with cleo.
+          Let&apos;s get started adding cleo to your server, this will be the
+          start of your amazing journey with cleo.
         </p>
       </div>
 
@@ -138,7 +138,7 @@ const AddServerPage = () => {
               </SelectTrigger>
               <SelectContent align="center">
                 {guilds && guilds.length ? (
-                  guilds.map((g: any) => (
+                  guilds.map((g: { id: string; name: string }) => (
                     <SelectItem key={g.id} value={g.id}>
                       {g.name}
                     </SelectItem>

@@ -4,7 +4,7 @@ import { Heading } from "@/components/Heading";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { client } from "@/lib/client";
 import { useQuery } from "@tanstack/react-query";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export const Channels = ({ guildId, getTokenAction }: TabProps) => {
   // individual state for each channel setting

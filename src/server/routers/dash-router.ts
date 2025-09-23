@@ -2,7 +2,6 @@ import { Limits } from "@/prisma";
 import { dashProcedure, j } from "@/server/jstack";
 import {
   RESTGetAPICurrentUserGuildsResult,
-  RESTGetAPIGuildMemberResult,
   RESTGetAPIGuildResult,
   RESTGetAPIGuildChannelsResult,
 } from "discord-api-types/v10";
@@ -97,12 +96,13 @@ export const dashRouter = j.router({
         guilds: servers,
         message: "Retrieved sorted guilds list",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" && err && "message" in err
+          ? String((err as { message?: unknown }).message)
+          : "Internal error";
       console.error("getGuildList error:", err);
-      return c.json({
-        guilds: null,
-        message: err.message || "Internal error",
-      });
+      return c.json({ guilds: null, message });
     }
   }),
 
@@ -181,12 +181,13 @@ export const dashRouter = j.router({
               : "https://archive.org/download/discordprofilepictures/discordblue.png",
           },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("getHeaderInfo error:", err);
-        return c.json({
-          success: false,
-          error: err.message || "Internal error",
-        });
+        const message =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Internal error";
+        return c.json({ success: false, error: message });
       }
     }),
 
@@ -254,12 +255,13 @@ export const dashRouter = j.router({
             isOwner: user.discordId === guildData.owner_id,
           },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("getGuild error:", err);
-        return c.json({
-          success: false,
-          error: err.message || "Internal error",
-        });
+        const message =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Internal error";
+        return c.json({ success: false, error: message });
       }
     }),
 
@@ -365,12 +367,13 @@ export const dashRouter = j.router({
           data: { guild },
           message: "Set the invite link",
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Updating db error:", err);
-        return c.json({
-          success: false,
-          error: err.message || "Internal server error",
-        });
+        const message =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Internal server error";
+        return c.json({ success: false, error: message });
       }
     }),
 
@@ -466,12 +469,13 @@ export const dashRouter = j.router({
           success: true,
           data: { channels: result, allChannels },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("getGuildChannels error:", err);
-        return c.json({
-          success: false,
-          error: err.message || "Internal error",
-        });
+        const message =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Internal error";
+        return c.json({ success: false, error: message });
       }
     }),
 
@@ -695,7 +699,7 @@ export const dashRouter = j.router({
       const authUserId = session.user.id;
       const { name, email } = input;
       // Build updates separately so we only touch the columns that changed.
-      const authUpdates: any = {};
+      const authUpdates: Record<string, string> = {};
       if (name && name !== session.user.name) authUpdates.name = name.trim();
       if (email && email !== session.user.email)
         authUpdates.email = email.trim().toLowerCase();
@@ -731,11 +735,14 @@ export const dashRouter = j.router({
             plan: user.plan,
           },
         });
-      } catch (err: any) {
-        const message =
-          err?.code === "P2002"
-            ? "Email already in use"
-            : err?.message || "Failed to update profile";
+      } catch (err: unknown) {
+        const rawMessage =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Failed to update profile";
+        const message = rawMessage.includes("P2002")
+          ? "Email already in use"
+          : rawMessage;
         console.error("updateProfile error", err);
         return c.json({ success: false, error: message });
       }

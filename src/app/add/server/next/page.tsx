@@ -69,7 +69,7 @@ const ServerAddNextPage = () => {
     } else if (configuredGuild && !configuredGuild.configured) {
       toast.error(configuredGuild.message);
     }
-  }, [configuredGuild]);
+  }, [configuredGuild, router]);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -84,13 +84,13 @@ const ServerAddNextPage = () => {
         <p>
           But wait... before you can add Cleo you need to select a channel for
           updates from Cleo, this is used to send you information about new
-          features and changes to commands. This shouldn't be more than once a
-          month.
+          features and changes to commands. This shouldn&apos;t be more than
+          once a month.
         </p>
         <p>
           You will need to complete adding Cleo to your server first before you
-          can select a channel. Don't worry, the channels will automatically
-          appear once you have added Cleo to your server.
+          can select a channel. Don&apos;t worry, the channels will
+          automatically appear once you have added Cleo to your server.
         </p>
       </div>
 

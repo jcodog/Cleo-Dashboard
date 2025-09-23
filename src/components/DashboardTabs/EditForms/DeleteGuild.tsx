@@ -7,10 +7,10 @@ import { toast } from "sonner";
 
 interface DeleteGuildProps {
   isOwner: boolean;
-  guildId: string;
+  // guildId intentionally omitted until delete endpoint implemented
 }
 
-export const DeleteGuild = ({ isOwner, guildId }: DeleteGuildProps) => {
+export const DeleteGuild = ({ isOwner }: DeleteGuildProps) => {
   return (
     <div className="flex flex-col w-full gap-2">
       <h2 className="text-base font-semibold tracking-wide uppercase text-destructive/90">

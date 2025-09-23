@@ -44,7 +44,13 @@ export const createAuth = (env: AuthEnv) => {
           "guilds.join",
           "guilds.members.read",
         ],
-        mapProfile: (profile: any) => {
+        mapProfile: (profile: {
+          id: string;
+          email?: string;
+          global_name?: string;
+          username?: string;
+          avatar?: string | null;
+        }) => {
           // Standardize the profile mapping so we can later create/sync user records.
           // better-auth expects { id, email, name, image } at minimum.
           return {
@@ -80,10 +86,19 @@ export const createAuth = (env: AuthEnv) => {
     events: {
       user: {
         // Runs after a Better Auth User + Account rows are persisted.
-        created: async ({ user, context }: { user: any; context: any }) => {
+        created: async ({
+          user,
+        }: {
+          user: {
+            id: string;
+            email?: string | null;
+            name?: string | null;
+            username?: string | null;
+          };
+        }) => {
           try {
             // 'db' here is the prisma client passed through the adapter.
-            const prisma = (context as any).db ?? db;
+            const prisma = db;
 
             // If already provisioned (re-entrancy / retries), exit early.
             const existing = await prisma.users.findFirst({
@@ -112,7 +127,7 @@ export const createAuth = (env: AuthEnv) => {
 
             // Prepare initial username: prefer mapped username (mapProfile sets username in raw?) or fallback.
             const baseUsername =
-              (user as any).username ||
+              user.username ||
               user.name ||
               (user.email
                 ? user.email.split("@")[0]
@@ -140,13 +155,13 @@ export const createAuth = (env: AuthEnv) => {
             await prisma.users.create({
               data: {
                 extId: user.id,
-                username,
+                username: username as string,
                 email: user.email,
                 discordId: discordAccount?.accountId || `pending-${user.id}`,
                 limits: { create: { date: new Date() } },
               },
             });
-          } catch (err) {
+          } catch (err: unknown) {
             console.error("[better-auth:user.created] provisioning error", err);
           }
         },

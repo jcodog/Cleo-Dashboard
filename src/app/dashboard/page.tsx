@@ -4,14 +4,10 @@ import { Heading } from "@/components/Heading";
 import { ServerList } from "@/components/ServerList";
 import { Button } from "@/components/ui/button";
 import { client } from "@/lib/client";
-import { Servers } from "@/prisma/client";
-import { authClient } from "@/lib/authClient";
+// import { authClient } from "@/lib/authClient";
 import UserButton from "@/components/UserButton";
 import { useQuery } from "@tanstack/react-query";
-import {
-  OAuth2Scopes,
-  RESTGetAPICurrentUserGuildsResult,
-} from "discord-api-types/v10";
+import { OAuth2Scopes } from "discord-api-types/v10";
 import { CircleCheck, CircleX, Loader, Plus } from "lucide-react";
 import Link from "next/link";
 import {
@@ -24,8 +20,9 @@ import { useMemo } from "react";
 
 const DashboardHomePage = () => {
   const router = useRouter();
-  const { useSession } = authClient;
-  const { data: session } = useSession();
+  // const { useSession } = authClient;
+  // Session currently unused for dashboard list; remove to satisfy lint. Re-add if conditional UI needed.
+  // const { data: session } = useSession();
   // derive guild list & install status from queries instead of useEffect state churn
 
   const { data, isLoading } = useQuery({
@@ -45,9 +42,10 @@ const DashboardHomePage = () => {
       return await res.json();
     },
   });
-  const guilds: Array<Servers> | null = useMemo(() => {
+
+  const guilds = useMemo(() => {
     if (!data?.guilds) return null;
-    return data.guilds.map((server: any) => ({
+    return data.guilds.map((server) => ({
       ...server,
       lastOpened: server.lastOpened ? new Date(server.lastOpened) : null,
     }));
@@ -139,7 +137,7 @@ const DashboardHomePage = () => {
         ) : (
           <div className="flex flex-col items-center justify-center p-6 gap-4 rounded-xl border border-border/60 bg-card/70 backdrop-blur">
             <p className="text-muted-foreground">
-              You have no servers yet. Let's add your first one!
+              You have no servers yet. Let&apos;s add your first one!
             </p>
             <Button
               variant="gradient"

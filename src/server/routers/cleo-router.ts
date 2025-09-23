@@ -165,7 +165,7 @@ export const cleoRouter = j.router({
         },
       })
     )
-    .mutation(async ({ c, ctx: { db }, input: { guildId, message, user } }) => {
+    .mutation(async ({ c, ctx: { db }, input: { guildId, message } }) => {
       const config = await db.automodConfig.findUnique({
         where: {
           guildId,

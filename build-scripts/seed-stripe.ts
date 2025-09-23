@@ -143,6 +143,13 @@ const seedProduct = async (
         nickname: "Mega message bundle",
       });
 
+      // Log created tier IDs so they are not considered unused by lint
+      console.log("Created message bundles", {
+        small: smallBundle.id,
+        medium: mediumBundle.id,
+        large: largeBundle.id,
+        mega: mesgaBundle.id,
+      });
       // Set a sensible default
       await stripe.products.update(newProduct.id, {
         default_price: smallBundle.id,

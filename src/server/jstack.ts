@@ -2,10 +2,7 @@ import { getDb } from "@/lib/prisma";
 import { env } from "hono/adapter";
 import { HTTPException } from "hono/http-exception";
 import { InferMiddlewareOutput, jstack } from "jstack";
-import {
-  RESTGetAPIOAuth2CurrentAuthorizationResult,
-  RESTGetAPIUserResult,
-} from "discord-api-types/v10";
+import { RESTGetAPIUserResult } from "discord-api-types/v10";
 import { loadStripe } from "@/lib/stripe";
 import { getWorkerAuth } from "@/lib/betterAuth/workers";
 import { getDiscordAccessToken } from "@/lib/betterAuth/discordToken";
@@ -157,10 +154,14 @@ const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
           });
         }
       }
-    } catch (e) {
+    } catch (e: unknown) {
+      const message =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : "claim/create failure";
       console.error("[dashMiddleware] claim/create failure", {
         authUserId,
-        error: (e as any)?.message,
+        error: message,
       });
     }
   }
@@ -182,7 +183,7 @@ const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
       clientId: env(c).DISCORD_CLIENT_ID || "",
       clientSecret: env(c).DISCORD_CLIENT_SECRET || "",
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Fallback to legacy accessToken field if helper failed (e.g. missing refresh token yet)
     const discordAccount = await db.account.findFirst({
       where: { userId: authUserId, providerId: "discord" },
@@ -190,11 +191,16 @@ const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
     if (!discordAccount?.accessToken) {
       console.error("[dashMiddleware] missing discord linkage", {
         authUserId,
-        error: e?.message,
+        error:
+          typeof e === "object" && e && "message" in e
+            ? String((e as { message?: unknown }).message)
+            : undefined,
       });
       throw new HTTPException(401, {
         message: `Unauthorized: Missing Discord linkage (${
-          e?.message || "no token"
+          typeof e === "object" && e && "message" in e
+            ? (e as { message?: unknown }).message || "no token"
+            : "no token"
         })`,
       });
     }
@@ -239,6 +245,7 @@ const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
         where: { id: appUser.id },
       });
       if (!refreshed || refreshed.discordId !== discordId) {
+        console.error("[dashMiddleware] discord id sync error", err);
         console.error("[dashMiddleware] discord id mismatch after sync", {
           authUserId,
           dbDiscordId: refreshed?.discordId,

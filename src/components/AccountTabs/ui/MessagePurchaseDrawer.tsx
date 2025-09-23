@@ -168,7 +168,7 @@ export const MessagePurchaseDrawer = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[...data.prices]
                   .sort((a, b) => a.amount - b.amount)
-                  .map((price, idx, arr) => (
+                  .map((price, idx) => (
                     <PriceCard
                       key={price.id}
                       priceId={price.id}
