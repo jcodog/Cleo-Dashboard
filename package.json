@@ -11,9 +11,6 @@
     "seed-stripe": "tsx ./build-scripts/seed-stripe.ts"
   },
   "dependencies": {
-    "@clerk/backend": "^2.15.0",
-    "@clerk/nextjs": "^6.32.2",
-    "@clerk/themes": "^2.4.21",
     "@databuddy/sdk": "^2.1.75",
     "@prisma/client": "^6.16.2",
     "@prisma/extension-accelerate": "^2.0.2",

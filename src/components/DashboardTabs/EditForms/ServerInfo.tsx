@@ -4,7 +4,6 @@ import { Heading } from "@/components/Heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { client } from "@/lib/client";
-import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { APIGuild } from "discord-api-types/v10";
 import { useState } from "react";
@@ -23,7 +22,6 @@ export const ServerInfo = ({
   isDirty,
   setDirtyAction,
 }: ServerInfoProps) => {
-  const { getToken } = useAuth();
   const initialName = apiGuild.name || "";
   const initialDescription = apiGuild.description ?? "";
   const [name, setName] = useState<string>(initialName);
@@ -35,7 +33,6 @@ export const ServerInfo = ({
   const { data, isPending, error, mutate } = useMutation({
     mutationKey: ["modify-guild-info"],
     mutationFn: async () => {
-      const token = await getToken();
       const req = await client.dash.setGuildInfo.$post(
         {
           guildId: apiGuild.id,
@@ -44,7 +41,7 @@ export const ServerInfo = ({
           initialName,
           initialDescription,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        undefined
       );
 
       return await req.json();

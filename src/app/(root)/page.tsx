@@ -2,7 +2,8 @@ import { Heading } from "@/components/Heading";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { HeroButton } from "@/components/HeroButton";
 import { Button } from "@/components/ui/button";
-import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import {
   ArrowRight,
   ShieldCheck,
@@ -12,6 +13,8 @@ import {
 import Link from "next/link";
 
 export default async function Home() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const isAuthed = !!session;
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-x-hidden bg-black text-white">
       {/* Ambient background shared with app */}
@@ -38,29 +41,7 @@ export default async function Home() {
         </p>
 
         <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <SignedOut>
-            <div className="flex gap-3">
-              <SignUpButton>
-                <Button
-                  size="lg"
-                  className="group relative overflow-hidden rounded-full px-8 py-4 text-white shadow-xl transition-all duration-500 [--shine:linear-gradient(120deg,transparent,rgba(255,255,255,0.6),transparent)] bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600"
-                >
-                  <span className="absolute inset-0 -translate-x-full bg-[image:var(--shine)] bg-[length:250%_250%] bg-no-repeat group-hover:translate-x-0 transition-transform duration-700" />
-                  Get Started
-                </Button>
-              </SignUpButton>
-              <SignInButton>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="rounded-full border-cyan-400/70 px-8 py-4 text-cyan-300 hover:bg-cyan-500 hover:text-white"
-                >
-                  Sign In
-                </Button>
-              </SignInButton>
-            </div>
-          </SignedOut>
-          <SignedIn>
+          {isAuthed ? (
             <Button
               asChild
               size="lg"
@@ -74,7 +55,28 @@ export default async function Home() {
                 Launch App <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>
-          </SignedIn>
+          ) : (
+            <div className="flex gap-3">
+              <Button
+                asChild
+                size="lg"
+                className="group relative overflow-hidden rounded-full px-8 py-4 text-white shadow-xl transition-all duration-500 [--shine:linear-gradient(120deg,transparent,rgba(255,255,255,0.6),transparent)] bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600"
+              >
+                <Link href="/sign-up">
+                  <span className="absolute inset-0 -translate-x-full bg-[image:var(--shine)] bg-[length:250%_250%] bg-no-repeat group-hover:translate-x-0 transition-transform duration-700" />
+                  Get Started
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="rounded-full border-cyan-400/70 px-8 py-4 text-cyan-300 hover:bg-cyan-500 hover:text-white"
+              >
+                <Link href="/sign-in">Sign In</Link>
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="mt-10">

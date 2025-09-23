@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { client } from "@/lib/client";
 import { cn } from "@/lib/utils";
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { authClient } from "@/lib/authClient";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, House, Loader, FileWarning, Activity } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -95,7 +95,8 @@ const tabs: Tabs[] = [
 const GuildDashPage = ({ params }: GuildDashPageProps) => {
   const router = useRouter();
   const { guildId } = use(params);
-  const { getToken } = useAuth();
+  const { useSession } = authClient;
+  const { data: session } = useSession();
   const searchParams = useSearchParams();
   // take tab directly from URL (default to 'overview')
   const activeTabValue = searchParams.get("tab") || "overview";
@@ -140,11 +141,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
   const { data: headerInfo, isLoading: headerLoading } = useQuery({
     queryKey: ["get-header-info", guildId],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await client.dash.getHeaderInfo.$get(
-        { guildId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await client.dash.getHeaderInfo.$get({ guildId });
       const json = await res.json();
       // narrow union for noPerm response
       if ("noPerm" in json) {
@@ -253,19 +250,18 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
               ))}
             </ul>
             <div className="flex justify-between px-4 pt-4 border-t border-border/60">
-              <UserButton
-                appearance={{
-                  elements: {
-                    userButtonBox: {
-                      flexDirection: "row-reverse",
-                    },
-                    userButtonPopoverCard: "align-right",
-                  },
-                }}
-                showName
-                userProfileMode="navigation"
-                userProfileUrl="/dashboard/account"
-              />
+              {session ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => (window.location.href = "/dashboard/account")}
+                  className="flex items-center gap-2"
+                >
+                  <span className="truncate max-w-24">
+                    {session.user.name || session.user.email || "Account"}
+                  </span>
+                </Button>
+              ) : null}
               <ThemeToggle />
             </div>
           </div>
@@ -274,7 +270,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
               guildId={guildId}
               setDirtyAction={setIsDirty}
               isDirty={isDirty}
-              getTokenAction={getToken}
+              getTokenAction={async () => null}
             />
           </div>
         </div>

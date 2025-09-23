@@ -5,7 +5,8 @@ import { ServerList } from "@/components/ServerList";
 import { Button } from "@/components/ui/button";
 import { client } from "@/lib/client";
 import { Servers } from "@/prisma/client";
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { authClient } from "@/lib/authClient";
+import UserButton from "@/components/UserButton";
 import { useQuery } from "@tanstack/react-query";
 import {
   OAuth2Scopes,
@@ -23,21 +24,15 @@ import { useEffect, useState } from "react";
 
 const DashboardHomePage = () => {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { useSession } = authClient;
+  const { data: session } = useSession();
   const [guilds, setGuilds] = useState<Array<Servers> | null>(null);
   const [isUserInstalled, setIsUserInstalled] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["get-guild-list"],
     queryFn: async () => {
-      const token = await getToken();
-
-      // fetch sorted guilds from our dashRouter
-      const res = await client.dash.getGuildList.$get(undefined, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await client.dash.getGuildList.$get();
 
       return res.json();
     },
@@ -46,13 +41,7 @@ const DashboardHomePage = () => {
   const { data: oauth2Data, isLoading: isOauth2DataLoading } = useQuery({
     queryKey: ["get-oauth2-data"],
     queryFn: async () => {
-      const token = await getToken();
-
-      const res = await client.discord.getOauth2Data.$get(undefined, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await client.discord.getOauth2Data.$get();
 
       return await res.json();
     },
@@ -135,16 +124,7 @@ const DashboardHomePage = () => {
                 : "Cleo is not installed on your account. Click to install Cleo on your account."}
             </TooltipContent>
           </Tooltip>
-          <UserButton
-            showName
-            appearance={{
-              elements: {
-                userButtonBox: { flexDirection: "row-reverse" },
-              },
-            }}
-            userProfileMode="navigation"
-            userProfileUrl="/dashboard/account"
-          />
+          <UserButton namePosition="right" showName={true} />
         </div>
       </header>
 

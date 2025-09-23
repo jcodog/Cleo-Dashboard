@@ -22,7 +22,7 @@ export const AvatarSyncProvider = () => {
     (async () => {
       try {
         // Fetch current Discord avatar
-        const res = await client.auth.getDiscordAvatar.$get(undefined, {
+        const res = await client.session.getDiscordAvatar.$get(undefined, {
           headers: {
             Authorization: `Bearer ${await getToken()}`,
           },

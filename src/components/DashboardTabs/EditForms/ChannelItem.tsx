@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { client } from "@/lib/client";
-import { useAuth } from "@clerk/nextjs";
 import {
   QueryClient,
   useMutation,
@@ -36,7 +35,6 @@ export const ChannelItem = ({
   guildId: string;
 }) => {
   const queryClient = useQueryClient();
-  const { getToken } = useAuth();
   const [editing, setEditing] = useState<boolean>(false);
   const [channel, setChannel] = useState<{
     name: string | null;
@@ -47,14 +45,9 @@ export const ChannelItem = ({
   const { mutate } = useMutation({
     mutationKey: [`save-${type}-channel`],
     mutationFn: async () => {
-      const token = await getToken();
       const res = await client.dash.setChannel.$post(
         { guildId: guildId, type, channelId: channel.id! },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        undefined
       );
 
       const data = await res.json();

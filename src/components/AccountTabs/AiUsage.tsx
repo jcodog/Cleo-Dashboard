@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client } from "@/lib/client";
-import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -15,15 +14,11 @@ import {
 import { MessagePurchaseDrawer } from "@/components/AccountTabs/ui/MessagePurchaseDrawer";
 
 export const AiUsage = () => {
-  const { getToken } = useAuth();
   const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["ai-usage"],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await client.dash.aiUsage.$get(undefined, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await client.dash.aiUsage.$get();
       const json = await res.json();
       if (!json.usage) throw new Error("No usage data");
       return json.usage;

@@ -4,14 +4,13 @@ import { Heading } from "@/components/Heading";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { client } from "@/lib/client";
-import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { RESTGetAPIGuildChannelsResult } from "discord-api-types/v10";
 import { useRouter } from "next/navigation";
@@ -19,142 +18,125 @@ import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const ServerAddNextPage = () => {
-	const router = useRouter();
-	const [channelId, setChannelId] = useState<string>();
-	const [guildId, setGuildId] = useState<string>();
-	const [channels, setChannels] = useState<RESTGetAPIGuildChannelsResult>();
-	const { getToken } = useAuth();
+  const router = useRouter();
+  const [channelId, setChannelId] = useState<string>();
+  const [guildId, setGuildId] = useState<string>();
+  const [channels, setChannels] = useState<RESTGetAPIGuildChannelsResult>();
 
-	const { data, isLoading } = useQuery({
-		queryKey: ["finalise-guild-onboarding"],
-		queryFn: async () => {
-			const token = await getToken();
+  const { data, isLoading } = useQuery({
+    queryKey: ["finalise-guild-onboarding"],
+    queryFn: async () => {
+      const res = await client.discord.getOnboardingGuildChannels.$get(
+        undefined,
+        undefined
+      );
 
-			const res = await client.discord.getOnboardingGuildChannels.$get(
-				undefined,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
+      return await res.json();
+    },
+    refetchInterval: (query) => {
+      return query.state.data?.channels ? false : 10000;
+    },
+  });
 
-			return await res.json();
-		},
-		refetchInterval: (query) => {
-			return query.state.data?.channels ? false : 10000;
-		},
-	});
+  const { mutate, data: configuredGuild } = useMutation({
+    mutationKey: ["configure-onboarding-guild"],
+    mutationFn: async () => {
+      const res = await client.discord.configureGuild.$post(
+        {
+          channelId: channelId!,
+          guildId: guildId!,
+        },
+        undefined
+      );
 
-	const { mutate, data: configuredGuild } = useMutation({
-		mutationKey: ["configure-onboarding-guild"],
-		mutationFn: async () => {
-			const token = await getToken();
+      return await res.json();
+    },
+  });
 
-			const res = await client.discord.configureGuild.$post(
-				{
-					channelId: channelId!,
-					guildId: guildId!,
-				},
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
+  useEffect(() => {
+    if (data && data.channels && data.guildId) {
+      setChannels(data.channels);
+      setGuildId(data.guildId);
+    } else if (data && !data.channels) {
+      toast.error(data.message);
+    }
+  }, [data]);
 
-			return await res.json();
-		},
-	});
+  useEffect(() => {
+    if (configuredGuild && configuredGuild.configured) {
+      toast.success(configuredGuild.message);
+      router.push("/dashboard");
+    } else if (configuredGuild && !configuredGuild.configured) {
+      toast.error(configuredGuild.message);
+    }
+  }, [configuredGuild]);
 
-	useEffect(() => {
-		if (data && data.channels && data.guildId) {
-			setChannels(data.channels);
-			setGuildId(data.guildId);
-		} else if (data && !data.channels) {
-			toast.error(data.message);
-		}
-	}, [data]);
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-	useEffect(() => {
-		if (configuredGuild && configuredGuild.configured) {
-			toast.success(configuredGuild.message);
-			router.push("/dashboard");
-		} else if (configuredGuild && !configuredGuild.configured) {
-			toast.error(configuredGuild.message);
-		}
-	}, [configuredGuild]);
+    mutate();
+  };
 
-	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
+  return (
+    <section className="flex flex-1 flex-col items-center justify-center gap-8 max-w-3xl">
+      <div className="flex flex-col items-center justify-center gap-2 text-pretty text-center">
+        <Heading>Configure Cleo</Heading>
+        <p>
+          But wait... before you can add Cleo you need to select a channel for
+          updates from Cleo, this is used to send you information about new
+          features and changes to commands. This shouldn't be more than once a
+          month.
+        </p>
+        <p>
+          You will need to complete adding Cleo to your server first before you
+          can select a channel. Don't worry, the channels will automatically
+          appear once you have added Cleo to your server.
+        </p>
+      </div>
 
-		mutate();
-	};
+      <form
+        className="flex flex-col flex-1 max-h-[33vh] items-center justify-center gap-2 max-w-lg w-full text-pretty"
+        onSubmit={handleSubmit}
+      >
+        <Label className="w-full text-start items-start">
+          Cleo Updates Channel
+        </Label>
+        <div className="flex gap-4 w-full">
+          <Select
+            disabled={!channels || !guildId || isLoading}
+            onValueChange={(value) => {
+              setChannelId(value);
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a channel..." />
+            </SelectTrigger>
+            <SelectContent>
+              {channels ? (
+                channels.map((channel) => (
+                  <SelectItem key={channel.id} value={channel.id}>
+                    {channel.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem disabled value="none">
+                  No channels to select
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
 
-	return (
-		<section className="flex flex-1 flex-col items-center justify-center gap-8 max-w-3xl">
-			<div className="flex flex-col items-center justify-center gap-2 text-pretty text-center">
-				<Heading>Configure Cleo</Heading>
-				<p>
-					But wait... before you can add Cleo you need to select a
-					channel for updates from Cleo, this is used to send you
-					information about new features and changes to commands. This
-					shouldn't be more than once a month.
-				</p>
-				<p>
-					You will need to complete adding Cleo to your server first
-					before you can select a channel. Don't worry, the channels
-					will automatically appear once you have added Cleo to your
-					server.
-				</p>
-			</div>
-
-			<form
-				className="flex flex-col flex-1 max-h-[33vh] items-center justify-center gap-2 max-w-lg w-full text-pretty"
-				onSubmit={handleSubmit}
-			>
-				<Label className="w-full text-start items-start">
-					Cleo Updates Channel
-				</Label>
-				<div className="flex gap-4 w-full">
-					<Select
-						disabled={!channels || !guildId || isLoading}
-						onValueChange={(value) => {
-							setChannelId(value);
-						}}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue placeholder="Select a channel..." />
-						</SelectTrigger>
-						<SelectContent>
-							{channels ? (
-								channels.map((channel) => (
-									<SelectItem
-										key={channel.id}
-										value={channel.id}
-									>
-										{channel.name}
-									</SelectItem>
-								))
-							) : (
-								<SelectItem disabled value="none">
-									No channels to select
-								</SelectItem>
-							)}
-						</SelectContent>
-					</Select>
-
-					<Button
-						type="submit"
-						className="cursor-pointer"
-						disabled={!channels || !guildId || isLoading}
-					>
-						Submit
-					</Button>
-				</div>
-			</form>
-		</section>
-	);
+          <Button
+            type="submit"
+            className="cursor-pointer"
+            disabled={!channels || !guildId || isLoading}
+          >
+            Submit
+          </Button>
+        </div>
+      </form>
+    </section>
+  );
 };
 
 export default ServerAddNextPage;

@@ -4,12 +4,11 @@ import { JStackProvider } from "@/components/providers/jstack";
 import { ThemeProvider } from "@/components/providers/theme";
 import { Toaster } from "@/components/ui/sonner";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
-import { ClerkProvider } from "@/components/providers/clerk";
 import { CookieBanner } from "@/components/CookieBanner";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PreReleaseBanner } from "../components/PreReleaseBanner";
-import { AvatarSyncProvider } from "@/components/providers/avatar-sync";
+// Removed Clerk avatar sync. If future avatar sync is needed, implement via Better Auth + Discord tokens.
 import { Databuddy } from "@databuddy/sdk";
 
 export const metadata: Metadata = {
@@ -72,39 +71,36 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ClerkProvider>
-            <JStackProvider>
-              {children}
-              <Databuddy
-                clientId="kYvU4Eddh8RzHScTlZ3Pj"
-                trackHashChanges={true}
-                trackAttributes={true}
-                trackOutgoingLinks={true}
-                trackInteractions={true}
-                trackEngagement={true}
-                trackScrollDepth={true}
-                trackExitIntent={true}
-                trackBounceRate={true}
-                trackWebVitals={true}
-                trackErrors={true}
-                enableBatching={true}
-              />
-              <AvatarSyncProvider />
-              <Toaster
-                richColors
-                position="top-right"
-                visibleToasts={3}
-                duration={5000}
-                closeButton
-                icons={{
-                  info: <Info />,
-                  success: <CircleCheck />,
-                  error: <CircleAlert />,
-                }}
-              />
-              <CookieBanner />
-            </JStackProvider>
-          </ClerkProvider>
+          <JStackProvider>
+            {children}
+            <Databuddy
+              clientId="kYvU4Eddh8RzHScTlZ3Pj"
+              trackHashChanges={true}
+              trackAttributes={true}
+              trackOutgoingLinks={true}
+              trackInteractions={true}
+              trackEngagement={true}
+              trackScrollDepth={true}
+              trackExitIntent={true}
+              trackBounceRate={true}
+              trackWebVitals={true}
+              trackErrors={true}
+              enableBatching={true}
+            />
+            <Toaster
+              richColors
+              position="top-right"
+              visibleToasts={3}
+              duration={5000}
+              closeButton
+              icons={{
+                info: <Info />,
+                success: <CircleCheck />,
+                error: <CircleAlert />,
+              }}
+            />
+            <CookieBanner />
+          </JStackProvider>
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />
