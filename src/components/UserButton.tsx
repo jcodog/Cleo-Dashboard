@@ -88,7 +88,7 @@ export function UserButton({
         <button
           aria-label="User menu"
           className={cn(
-            "group inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-2.5 py-1.5 text-sm hover:bg-card/80 transition-colors",
+            "group inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-2.5 py-1.5 text-sm hover:bg-card/80 transition-colors cursor-pointer",
             className
           )}
         >

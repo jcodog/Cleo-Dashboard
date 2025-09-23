@@ -15,23 +15,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Permissions, Snowflake } from "discord-api-types/globals";
 import { GuildFeature } from "discord-api-types/v10";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 const AddServerPage = () => {
   const router = useRouter();
-  const [guilds, setGuilds] = useState<
-    {
-      id: Snowflake;
-      name: string;
-      icon: string | null;
-      banner: string | null;
-      owner: boolean;
-      features: GuildFeature[];
-      permissions: Permissions;
-      approximate_member_count?: number | undefined;
-      approximate_presence_count?: number | undefined;
-    }[]
-  >();
+  // selected guild id
   const [guildId, setGuildId] = useState<string>();
 
   const { data, isLoading } = useQuery({
@@ -73,7 +61,7 @@ const AddServerPage = () => {
     },
   });
 
-  const { mutate: generateUrl, data: generatedUrl } = useMutation({
+  const { mutate: generateUrl } = useMutation({
     mutationKey: ["generate-add-url"],
     mutationFn: async () => {
       const userRes = await client.discord.getOauth2Data.$get();
@@ -99,20 +87,21 @@ const AddServerPage = () => {
 
       return await res.json();
     },
+    onSuccess: (resp) => {
+      if (resp?.url) {
+        router.push("/add/server/next");
+        setTimeout(() => {
+          try {
+            window.open(resp.url, "_blank")?.focus();
+          } catch {
+            /* ignore popup blockers */
+          }
+        }, 50);
+      }
+    },
   });
 
-  useEffect(() => {
-    if (data && data.guilds) {
-      setGuilds(data.guilds);
-    }
-  }, [data]);
-
-  useEffect(() => {
-    if (generatedUrl && generatedUrl.url) {
-      router.push("/add/server/next");
-      window.open(generatedUrl.url, "_blank")!.focus();
-    }
-  }, [generatedUrl]);
+  const guilds = useMemo(() => data?.guilds || [], [data]);
 
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-8 max-w-3xl">
@@ -139,7 +128,7 @@ const AddServerPage = () => {
             }}
           >
             <Select
-              disabled={!guilds || isLoading}
+              disabled={!guilds?.length || isLoading}
               onValueChange={(value) => {
                 setGuildId(value);
               }}
@@ -148,10 +137,10 @@ const AddServerPage = () => {
                 <SelectValue placeholder="Select a server..." />
               </SelectTrigger>
               <SelectContent align="center">
-                {guilds ? (
-                  guilds.map((guild) => (
-                    <SelectItem key={guild.id} value={guild.id}>
-                      {guild.name}
+                {guilds && guilds.length ? (
+                  guilds.map((g: any) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name}
                     </SelectItem>
                   ))
                 ) : (

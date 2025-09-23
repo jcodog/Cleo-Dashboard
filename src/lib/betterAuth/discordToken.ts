@@ -22,6 +22,7 @@ export async function getDiscordAccessToken(opts: {
   });
 
   if (!account || !account.accessToken) {
+    console.warn("[discordToken] missing account/accessToken", { userId });
     throw new Error("No Discord account or access token linked for user");
   }
 
@@ -34,9 +35,24 @@ export async function getDiscordAccessToken(opts: {
     ? expiresAt - now < 60_000 /* 1 min grace */
     : false;
 
-  if (!isExpired) return account.accessToken as string;
+  if (!isExpired) {
+    const remaining = expiresAt ? expiresAt - now : undefined;
+    if (remaining && remaining < 5 * 60_000) {
+      console.info("[discordToken] token valid but near expiry", {
+        userId,
+        remainingMs: remaining,
+      });
+    } else {
+      console.debug?.("[discordToken] token valid", { userId });
+    }
+    return account.accessToken as string;
+  }
 
   if (!account.refreshToken) {
+    console.error("[discordToken] expired token without refresh token", {
+      userId,
+      accountId: account.id,
+    });
     throw new Error("Discord token expired and no refresh token available");
   }
 
@@ -48,6 +64,7 @@ export async function getDiscordAccessToken(opts: {
     refresh_token: account.refreshToken,
   });
 
+  console.info("[discordToken] refreshing discord token", { userId });
   const response = await fetch("https://discord.com/api/v10/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -55,6 +72,12 @@ export async function getDiscordAccessToken(opts: {
   });
 
   if (!response.ok) {
+    const text = await response.text().catch(() => "<no-body>");
+    console.error("[discordToken] refresh failed", {
+      userId,
+      status: response.status,
+      body: text?.slice(0, 300),
+    });
     throw new Error("Failed to refresh Discord access token");
   }
 
@@ -80,6 +103,11 @@ export async function getDiscordAccessToken(opts: {
       scope: json.scope ?? account.scope,
       updatedAt: new Date(),
     },
+  });
+
+  console.info("[discordToken] refresh success", {
+    userId,
+    expiresAt: newExpiry.toISOString(),
   });
 
   return newAccessToken;

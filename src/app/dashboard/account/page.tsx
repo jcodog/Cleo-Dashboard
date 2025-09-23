@@ -1,9 +1,16 @@
 "use client";
 import { authClient } from "@/lib/authClient";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AiUsage } from "@/components/AccountTabs/AiUsage";
-import { LogOut, RefreshCw, Copy } from "lucide-react";
+import { LogOut, RefreshCw } from "lucide-react";
+import { client } from "@/lib/client";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const btn = (base: string, extra?: string) =>
   `inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${base} ${
@@ -14,7 +21,7 @@ export default function DashboardAccountPage() {
   const { useSession } = authClient;
   const { data: session, isPending, error, refetch } = useSession();
   const [signingOut, setSigningOut] = useState(false);
-  const [copyToast, setCopyToast] = useState<string | null>(null);
+  // removed copy functionality (no longer needed)
   const isLoading = isPending;
 
   const handleSignOut = async () => {
@@ -27,15 +34,46 @@ export default function DashboardAccountPage() {
     }
   };
 
-  const copy = (label: string, value?: string) => {
-    if (!value) return;
-    navigator.clipboard.writeText(value).then(() => {
-      setCopyToast(`${label} copied`);
-      setTimeout(() => setCopyToast(null), 1500);
-    });
-  };
+  // no copy actions retained
 
   const user = session?.user;
+  // profile state (Better Auth user data)
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [initial, setInitial] = useState<{
+    name: string;
+    email: string;
+  } | null>(null);
+  // discordId now derived from profile
+
+  // Profile query via TanStack to avoid manual effect loops / accidental refetch storms
+  const queryClient = useQueryClient();
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    error: profileError,
+  } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const res = await client.dash.getProfile.$get();
+      const json = await res.json();
+      if (!json.profile) throw new Error("No profile returned");
+      return json.profile;
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Initialize local editable state once profile arrives
+  useEffect(() => {
+    if (profile && !initial) {
+      setName(profile.name || "");
+      setEmail(profile.email || "");
+      setInitial({ name: profile.name || "", email: profile.email || "" });
+    }
+  }, [profile, initial]);
+
   const initials = useMemo(
     () =>
       user
@@ -85,6 +123,17 @@ export default function DashboardAccountPage() {
     );
   }
 
+  // Handle profile loading/error (session is valid but profile fetch pending)
+  const profileSectionSkeleton = (
+    <div className="flex items-center gap-5 animate-in fade-in">
+      <div className="h-16 w-16 rounded-full bg-muted animate-pulse" />
+      <div className="flex flex-col gap-2 flex-1">
+        <div className="h-3 w-24 bg-muted rounded animate-pulse" />
+        <div className="h-4 w-40 bg-muted rounded animate-pulse" />
+      </div>
+    </div>
+  );
+
   return (
     <section className="flex flex-1 justify-center p-4">
       <div className="w-full max-w-4xl space-y-8">
@@ -98,51 +147,141 @@ export default function DashboardAccountPage() {
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-2 rounded-lg border bg-card p-5 shadow-sm flex flex-col gap-5">
             <div className="flex items-center gap-5">
-              {user?.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.image}
-                  alt="Avatar"
-                  className="h-16 w-16 rounded-full border object-cover"
-                />
+              {profileLoading && !profile ? (
+                profileSectionSkeleton
+              ) : profileError ? (
+                <div className="text-xs text-destructive">
+                  Failed to load profile
+                </div>
               ) : (
-                <div className="h-16 w-16 rounded-full border flex items-center justify-center text-lg font-semibold bg-muted">
-                  {initials}
-                </div>
-              )}
-              <div className="flex flex-col gap-1 min-w-0">
-                <span className="font-medium truncate">
-                  {user?.name || user?.email || "Unnamed User"}
-                </span>
-                {user?.email && (
-                  <span className="text-xs text-muted-foreground truncate">
-                    {user.email}
-                  </span>
-                )}
-                <div className="flex flex-wrap gap-2 mt-1">
-                  <button
-                    onClick={() => copy("User ID", user?.id)}
-                    className={btn(
-                      "border-border/60 bg-background hover:bg-accent/50 text-muted-foreground"
+                <>
+                  <Avatar className="h-16 w-16 border border-border/60">
+                    {user?.image && (
+                      <AvatarImage
+                        src={user.image}
+                        alt={user?.name || "Avatar"}
+                      />
                     )}
-                    title="Copy user id"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    <span className="truncate max-w-[120px]">{user?.id}</span>
-                  </button>
-                  {user?.email && (
-                    <button
-                      onClick={() => copy("Email", user.email!)}
-                      className={btn(
-                        "border-border/60 bg-background hover:bg-accent/50 text-muted-foreground"
-                      )}
-                      title="Copy email"
-                    >
-                      <Copy className="h-3.5 w-3.5" /> Email
-                    </button>
-                  )}
+                    <AvatarFallback className="text-lg font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <div className="flex gap-2">
+                      <span className="flex font-medium text-xl truncate">
+                        {name ||
+                          user?.name ||
+                          user?.email ||
+                          profile?.username ||
+                          "—"}
+                      </span>
+                      <span className="flex items-end font-medium text-xs text-muted-foreground truncate">
+                        {profile?.username || "—"}
+                      </span>
+                    </div>
+
+                    {profile?.email && (
+                      <span className="text-xs text-muted-foreground truncate mt-2">
+                        {profile.email}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <Separator />
+            <div className="space-y-4">
+              <h2 className="text-sm font-medium tracking-wide uppercase text-muted-foreground">
+                Profile
+              </h2>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!initial) return;
+                  const changed: { name?: string; email?: string } = {};
+                  if (name.trim() && name.trim() !== initial.name)
+                    changed.name = name.trim();
+                  if (email.trim() && email.trim() !== initial.email)
+                    changed.email = email.trim();
+                  if (!changed.name && !changed.email) {
+                    toast.info("No changes to save");
+                    return;
+                  }
+                  setSaving(true);
+                  try {
+                    const res = await client.dash.updateProfile.$post(changed);
+                    const json = await res.json();
+                    if (json.success) {
+                      toast.success("Profile updated");
+                      setInitial({
+                        name: json.profile.name,
+                        email: json.profile.email,
+                      });
+                      // Optimistically update cached profile
+                      queryClient.setQueryData(["profile"], json.profile);
+                      // Refetch session so navigation/user button reflects changes
+                      refetch();
+                    } else {
+                      toast.error(json.error || "Failed to update");
+                    }
+                  } catch (err: any) {
+                    toast.error(err?.message || "Update failed");
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                className="space-y-3"
+              >
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Display Name
+                  </label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your name"
+                    maxLength={80}
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Shown in dashboard instead of Discord username.
+                  </p>
                 </div>
-              </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Email
+                  </label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    maxLength={120}
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Used for receipts & billing notices.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Button size="sm" type="submit" disabled={saving}>
+                    {saving ? "Saving..." : "Save Changes"}
+                  </Button>
+                  {initial &&
+                    (name !== initial.name || email !== initial.email) && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setName(initial.name);
+                          setEmail(initial.email);
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    )}
+                </div>
+              </form>
             </div>
 
             <div className="flex flex-wrap gap-3 pt-2">
@@ -164,11 +303,6 @@ export default function DashboardAccountPage() {
               >
                 <RefreshCw className="h-4 w-4" /> Refresh Session
               </button>
-              {copyToast && (
-                <span className="text-xs text-muted-foreground self-center animate-in fade-in">
-                  {copyToast}
-                </span>
-              )}
             </div>
 
             <div className="rounded-md border bg-muted/30 p-4 text-xs leading-relaxed space-y-2">
@@ -179,6 +313,10 @@ export default function DashboardAccountPage() {
                 <span className="text-muted-foreground">Session ID</span>
                 <span className="font-mono text-[11px] break-all">
                   {session.session.id}
+                </span>
+                <span className="text-muted-foreground">Discord ID</span>
+                <span className="font-mono text-[11px] break-all">
+                  {profile?.discordId || "—"}
                 </span>
                 <span className="text-muted-foreground">Expires</span>
                 <span className="font-mono text-[11px]">

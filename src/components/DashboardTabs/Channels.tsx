@@ -4,7 +4,7 @@ import { Heading } from "@/components/Heading";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { client } from "@/lib/client";
 import { useQuery } from "@tanstack/react-query";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 export const Channels = ({ guildId, getTokenAction }: TabProps) => {
   // individual state for each channel setting
@@ -44,37 +44,31 @@ export const Channels = ({ guildId, getTokenAction }: TabProps) => {
       return await res.json();
     },
   });
-
+  // When fresh data arrives and local state is still pristine (all null), seed it once
   useEffect(() => {
-    if (data?.success && data.data?.channels) {
-      // transform channels object into array
-      const entries = data.data.channels as Record<
-        string,
-        { id: string; name: string }
-      >;
-      Object.entries(entries).forEach(([key, ch]) => {
-        if (ch) {
-          switch (key) {
-            case "welcomeChannel":
-              setWelcomeChannel({ id: ch.id, name: ch.name });
-              break;
-            case "announcementChannel":
-              setAnnouncementChannel({
-                id: ch.id,
-                name: ch.name,
-              });
-              break;
-            case "updatesChannel":
-              setUpdatesChannel({ id: ch.id, name: ch.name });
-              break;
-            case "logsChannel":
-              setLogsChannel({ id: ch.id, name: ch.name });
-              break;
-          }
-        }
-      });
-    }
-  }, [data]);
+    if (!data?.success || !data.data?.channels) return;
+    const channels = data.data.channels as Record<
+      string,
+      { id: string; name: string } | null
+    >;
+    const seedIfNeeded = (
+      current: { id: string | null; name: string | null },
+      setter: (v: { id: string | null; name: string | null }) => void,
+      key: string
+    ) => {
+      if (!current.id && channels[key]) {
+        setter({ id: channels[key]!.id, name: channels[key]!.name });
+      }
+    };
+    seedIfNeeded(welcomeChannel, setWelcomeChannel, "welcomeChannel");
+    seedIfNeeded(
+      announcementChannel,
+      setAnnouncementChannel,
+      "announcementChannel"
+    );
+    seedIfNeeded(updatesChannel, setUpdatesChannel, "updatesChannel");
+    seedIfNeeded(logsChannel, setLogsChannel, "logsChannel");
+  }, [data, welcomeChannel, announcementChannel, updatesChannel, logsChannel]);
 
   return (
     <div className="flex flex-col flex-1 w-full overflow-y-auto gap-6 py-2 px-1 md:px-2">

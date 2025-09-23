@@ -8,6 +8,7 @@ import {
 } from "discord-api-types/v10";
 import { loadStripe } from "@/lib/stripe";
 import { getWorkerAuth } from "@/lib/betterAuth/workers";
+import { getDiscordAccessToken } from "@/lib/betterAuth/discordToken";
 
 export interface Env {
   Bindings: {
@@ -115,60 +116,140 @@ const botMiddleware = j.middleware(async ({ c, ctx, next }) => {
 
 // Dashboard middleware: maps Better Auth user -> internal Users record and builds discord access token.
 // Users.extId always stores Better Auth user.id (set at provisioning/claim time).
-const dashMiddleware = j.middleware(async ({ ctx, next }) => {
-  const { db, session, auth } = ctx as InferMiddlewareOutput<
-    typeof baseMiddleware
-  > & {
-    session: any;
-    auth: ReturnType<typeof getWorkerAuth>;
-  };
+const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
+  const { db, session } = ctx as InferMiddlewareOutput<typeof baseMiddleware> &
+    InferMiddlewareOutput<typeof authMiddleware>;
 
-  const authUserId: string = session.user.id;
+  const authUserId: string | undefined = session?.user?.id;
+  if (!authUserId) {
+    throw new HTTPException(401, {
+      message: "Unauthorized: No valid session user id",
+    });
+  }
 
-  // Find the internal app user via extId (Better Auth user id)
-  const appUser = await db.users.findFirst({ where: { extId: authUserId } });
+  // Find / ensure domain user. If missing attempt claim or creation.
+  let appUser = await db.users.findFirst({ where: { extId: authUserId } });
   if (!appUser) {
+    try {
+      const discordAccount = await db.account.findFirst({
+        where: { userId: authUserId, providerId: "discord" },
+      });
+      if (discordAccount?.accountId) {
+        // Attempt claim: existing user with same discordId from pre-migration
+        const legacy = await db.users.findUnique({
+          where: { discordId: discordAccount.accountId },
+        });
+        if (legacy) {
+          appUser = await db.users.update({
+            where: { id: legacy.id },
+            data: { extId: authUserId },
+          });
+        } else {
+          // Create fresh domain user (late provisioning scenario)
+          appUser = await db.users.create({
+            data: {
+              extId: authUserId,
+              username: `user_${authUserId.slice(0, 6)}`,
+              email: session.user.email,
+              discordId: discordAccount.accountId || `pending-${authUserId}`,
+              limits: { create: { date: new Date() } },
+            },
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[dashMiddleware] claim/create failure", {
+        authUserId,
+        error: (e as any)?.message,
+      });
+    }
+  }
+  if (!appUser) {
+    console.error("[dashMiddleware] unauthorized: domain user still missing", {
+      authUserId,
+    });
     throw new HTTPException(401, {
       message: "Unauthorized: App user not provisioned",
     });
   }
 
-  // Retrieve the Discord account from Better Auth Account table
-  // providerId for our discord provider is typically "discord"
-  const discordAccount = await db.account.findFirst({
-    where: { userId: authUserId, providerId: "discord" },
-  });
-
-  if (!discordAccount || !discordAccount.accessToken) {
-    throw new HTTPException(401, {
-      message: "Unauthorized: Missing Discord linkage",
+  // Always obtain a (possibly refreshed) Discord access token using helper to avoid stale/expired tokens
+  let accessToken: string;
+  try {
+    accessToken = await getDiscordAccessToken({
+      db,
+      userId: authUserId,
+      clientId: env(c).DISCORD_CLIENT_ID || "",
+      clientSecret: env(c).DISCORD_CLIENT_SECRET || "",
     });
+  } catch (e: any) {
+    // Fallback to legacy accessToken field if helper failed (e.g. missing refresh token yet)
+    const discordAccount = await db.account.findFirst({
+      where: { userId: authUserId, providerId: "discord" },
+    });
+    if (!discordAccount?.accessToken) {
+      console.error("[dashMiddleware] missing discord linkage", {
+        authUserId,
+        error: e?.message,
+      });
+      throw new HTTPException(401, {
+        message: `Unauthorized: Missing Discord linkage (${
+          e?.message || "no token"
+        })`,
+      });
+    }
+    accessToken = discordAccount.accessToken;
   }
 
-  const accessToken = discordAccount.accessToken;
-
-  // Optionally verify the token still yields discord user id
-  const response = await fetch("https://discord.com/api/v10/users/@me", {
+  // Validate/derive discord user id
+  const meRes = await fetch("https://discord.com/api/v10/users/@me", {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-
-  if (!response.ok) {
+  if (!meRes.ok) {
+    console.error("[dashMiddleware] discord /users/@me failed", {
+      authUserId,
+      status: meRes.status,
+    });
     throw new HTTPException(401, {
       message: "Unauthorized: Discord token invalid",
     });
   }
+  const discordUser = (await meRes.json()) as RESTGetAPIUserResult;
+  const discordId = discordUser?.id;
+  if (!discordId) {
+    console.error("[dashMiddleware] missing discord id in /me", { authUserId });
+    throw new HTTPException(401, {
+      message: "Unauthorized: Could not resolve Discord ID",
+    });
+  }
 
-  const discordUser = (await response.json()) as RESTGetAPIUserResult;
-  const discordId = discordUser.id;
-
-  if (!discordId || appUser.discordId !== discordId) {
-    // Optionally auto-sync discordId if missing on app user
-    if (!appUser.discordId && discordId) {
-      await db.users.update({ where: { id: appUser.id }, data: { discordId } });
-    } else {
-      throw new HTTPException(401, {
-        message: "Unauthorized: Discord ID mismatch",
+  // Auto-heal: if appUser.discordId is a provisional value (starts with 'pending-') or mismatched but empty, sync it.
+  if (
+    appUser.discordId.startsWith("pending-") ||
+    appUser.discordId !== discordId
+  ) {
+    try {
+      appUser = await db.users.update({
+        where: { id: appUser.id },
+        data: { discordId },
       });
+    } catch (err) {
+      // Only throw if still mismatched after attempted sync (avoid noisy failures on concurrency)
+      const refreshed = await db.users.findUnique({
+        where: { id: appUser.id },
+      });
+      if (!refreshed || refreshed.discordId !== discordId) {
+        console.error("[dashMiddleware] discord id mismatch after sync", {
+          authUserId,
+          dbDiscordId: refreshed?.discordId,
+          apiDiscordId: discordId,
+        });
+        throw new HTTPException(401, {
+          message: "Unauthorized: Discord ID mismatch",
+        });
+      } else {
+        appUser = refreshed;
+      }
     }
   }
 

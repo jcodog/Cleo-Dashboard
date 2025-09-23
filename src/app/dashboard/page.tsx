@@ -20,14 +20,13 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 const DashboardHomePage = () => {
   const router = useRouter();
   const { useSession } = authClient;
   const { data: session } = useSession();
-  const [guilds, setGuilds] = useState<Array<Servers> | null>(null);
-  const [isUserInstalled, setIsUserInstalled] = useState(false);
+  // derive guild list & install status from queries instead of useEffect state churn
 
   const { data, isLoading } = useQuery({
     queryKey: ["get-guild-list"],
@@ -46,28 +45,18 @@ const DashboardHomePage = () => {
       return await res.json();
     },
   });
-
-  useEffect(() => {
-    if (data && data.guilds) {
-      setGuilds(
-        data.guilds.map((server) => ({
-          ...server,
-          lastOpened: server.lastOpened ? new Date(server.lastOpened) : null,
-        }))
-      );
-    }
+  const guilds: Array<Servers> | null = useMemo(() => {
+    if (!data?.guilds) return null;
+    return data.guilds.map((server: any) => ({
+      ...server,
+      lastOpened: server.lastOpened ? new Date(server.lastOpened) : null,
+    }));
   }, [data]);
 
-  useEffect(() => {
-    if (oauth2Data && oauth2Data.currentOauth2Data) {
-      if (
-        oauth2Data.currentOauth2Data.scopes.includes(
-          OAuth2Scopes.ApplicationsCommands
-        )
-      ) {
-        setIsUserInstalled(true);
-      }
-    }
+  const isUserInstalled = useMemo(() => {
+    return !!oauth2Data?.currentOauth2Data?.scopes?.includes(
+      OAuth2Scopes.ApplicationsCommands
+    );
   }, [oauth2Data]);
 
   return (

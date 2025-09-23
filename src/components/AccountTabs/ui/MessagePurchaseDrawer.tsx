@@ -131,7 +131,7 @@ export const MessagePurchaseDrawer = () => {
   return (
     <Drawer>
       <DrawerTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="w-full">
           <PlusCircle className="size-4" /> Get More
         </Button>
       </DrawerTrigger>
