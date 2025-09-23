@@ -7,4 +7,5 @@ import { createClient } from "jstack";
  */
 export const client = createClient<AppRouter>({
 	baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/api`,
+	credentials: "include"
 });
