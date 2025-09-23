@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client } from "@/lib/client";
-import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -15,15 +14,11 @@ import {
 import { MessagePurchaseDrawer } from "@/components/AccountTabs/ui/MessagePurchaseDrawer";
 
 export const AiUsage = () => {
-  const { getToken } = useAuth();
   const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["ai-usage"],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await client.dash.aiUsage.$get(undefined, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await client.dash.aiUsage.$get();
       const json = await res.json();
       if (!json.usage) throw new Error("No usage data");
       return json.usage;
@@ -104,8 +99,16 @@ export const AiUsage = () => {
             Your daily message allowance resets at 00:00 UTC.
           </p>
         </div>
-        <span className="text-xs rounded-full border border-border/60 px-2 py-1 text-muted-foreground">
-          Resets in {timeToReset}
+        <span
+          className="relative inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-medium tracking-wide uppercase text-muted-foreground/90
+          border border-border/70 bg-background/30 backdrop-blur-md
+          shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_4px_12px_-3px_rgba(0,0,0,0.4),0_2px_4px_-1px_rgba(0,0,0,0.35)]
+          ring-1 ring-inset ring-border/40
+          before:absolute before:inset-0 before:rounded-[inherit] before:pointer-events-none
+          before:bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.25),transparent_70%)] before:opacity-60
+          after:absolute after:-inset-px after:rounded-[inherit] after:pointer-events-none after:bg-[linear-gradient(140deg,rgba(255,255,255,0.25),rgba(255,255,255,0)_40%)] after:opacity-30"
+        >
+          <span className="relative z-10">Resets in {timeToReset}</span>
         </span>
       </div>
       {isLoading ? (
@@ -173,23 +176,26 @@ export const AiUsage = () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm">
-              <p>
-                Additional Messages:{" "}
-                <span className="font-medium">{data!.additionalMessages}</span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Messages available beyond your daily plan. Purchases don’t
-                expire.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 rounded-md border border-border/50 bg-background/40 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Additional
+              </span>
+              <span className="text-sm font-semibold tabular-nums">
+                {data!.additionalMessages}
+              </span>
+              <span className="text-xs text-muted-foreground">messages</span>
               {isNearLimit && (
-                <span className="text-xs text-amber-600 dark:text-amber-500">
-                  You’re running low. Consider topping up.
+                <span className="ml-auto text-[11px] font-medium text-amber-600 dark:text-amber-500">
+                  Low balance
                 </span>
               )}
+            </div>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              These are bonus messages you purchased. They are consumed only
+              after today’s daily allowance reaches zero and they never expire.
+            </p>
+            <div className="flex items-center justify-end">
               <MessagePurchaseDrawer />
             </div>
           </div>

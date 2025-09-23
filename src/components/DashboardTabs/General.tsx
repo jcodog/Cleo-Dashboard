@@ -90,23 +90,23 @@ export const General = ({
           <>
             <Panel className="w-full max-w-2xl">
               <ServerInfo
-                apiGuild={data?.guild!}
+                apiGuild={data?.guild as NonNullable<typeof data>["guild"]}
                 isDirty={isDirty}
                 setDirtyAction={setDirtyAction}
               />
             </Panel>
             <Panel className="w-full max-w-2xl">
               <InviteLink
-                guild={data?.dbGuild!}
+                guild={data?.dbGuild as NonNullable<typeof data>["dbGuild"]}
                 isDirty={isDirty}
                 setDirtyAction={setDirtyAction}
               />
             </Panel>
             <Panel variant="danger" className="w-full max-w-2xl">
-              <DeleteGuild
-                isOwner={data!.isOwner}
-                guildId={data!.dbGuild!.id!}
-              />
+              {data && data.dbGuild && (
+                // <DeleteGuild isOwner={data.isOwner} guildId={data.dbGuild.id} />
+                <DeleteGuild isOwner={data.isOwner} />
+              )}
             </Panel>
           </>
         )}
@@ -115,15 +115,12 @@ export const General = ({
   );
 };
 
-const StatCard = ({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: any;
+interface StatCardProps {
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: any;
-}) => (
+  value: string | number | null | undefined;
+}
+const StatCard = ({ icon: Icon, label, value }: StatCardProps) => (
   <div className="group relative flex min-w-40 flex-col gap-2 rounded-lg border border-border/50 bg-gradient-to-b from-card/80 to-card/60 px-4 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.25)] backdrop-blur-sm">
     <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-muted-foreground">
       <span className="flex size-6 items-center justify-center rounded-md bg-accent/70 ring-1 ring-border/70 shadow-sm group-hover:bg-accent transition-colors">

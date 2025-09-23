@@ -1,6 +1,4 @@
 import { dashProcedure, j } from "@/server/jstack";
-import { env } from "hono/adapter";
-import type Stripe from "stripe";
 import z from "zod";
 
 export const paymentRouter = j.router({
@@ -38,15 +36,15 @@ export const paymentRouter = j.router({
         path: z.string(),
       })
     )
-    .mutation(async ({ c, ctx: { db, user, stripe }, input }) => {
+    .mutation(async ({ c, ctx: { db, user, stripe, authUser }, input }) => {
       let customerId: string;
       // Ensure a Stripe customer exists for this user
       if (!user.customerId) {
         const customer = await stripe.customers.create({
-          email: (user as any).email ?? undefined,
-          name: ((user as any).name ?? (user as any).username) || undefined,
+          email: user.email ?? undefined,
+          name: (authUser.name ?? user.username) || undefined,
           metadata: {
-            app_user_id: String((user as any).id ?? ""),
+            app_user_id: String(user.id ?? ""),
           },
         });
 

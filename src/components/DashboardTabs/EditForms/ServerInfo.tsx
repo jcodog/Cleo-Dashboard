@@ -4,7 +4,6 @@ import { Heading } from "@/components/Heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { client } from "@/lib/client";
-import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { APIGuild } from "discord-api-types/v10";
 import { useState } from "react";
@@ -18,24 +17,18 @@ interface ServerInfoProps {
   isDirty: boolean;
   setDirtyAction: Dispatch<SetStateAction<boolean>>;
 }
-export const ServerInfo = ({
-  apiGuild,
-  isDirty,
-  setDirtyAction,
-}: ServerInfoProps) => {
-  const { getToken } = useAuth();
+export const ServerInfo = ({ apiGuild, setDirtyAction }: ServerInfoProps) => {
   const initialName = apiGuild.name || "";
   const initialDescription = apiGuild.description ?? "";
   const [name, setName] = useState<string>(initialName);
   const [description, setDescription] = useState<string>(initialDescription);
 
-  const [invite, setInvite] = useState<string | undefined>();
+  // invite feature not yet implemented
   const queryClient = useQueryClient();
 
   const { data, isPending, error, mutate } = useMutation({
     mutationKey: ["modify-guild-info"],
     mutationFn: async () => {
-      const token = await getToken();
       const req = await client.dash.setGuildInfo.$post(
         {
           guildId: apiGuild.id,
@@ -44,7 +37,7 @@ export const ServerInfo = ({
           initialName,
           initialDescription,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        undefined
       );
 
       return await req.json();
@@ -68,7 +61,7 @@ export const ServerInfo = ({
     if (error) {
       toast.error(error.message);
     }
-  }, [data, error]);
+  }, [data, error, queryClient, setDirtyAction]);
 
   useEffect(() => {
     setName(apiGuild.name || "");

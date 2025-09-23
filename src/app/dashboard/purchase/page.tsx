@@ -12,6 +12,7 @@ import {
   RefreshCw,
   ExternalLink,
 } from "lucide-react";
+import Stripe from "stripe";
 
 const stripe = loadStripe({ secretKey: process.env.STRIPE_SECRET_KEY ?? "" });
 
@@ -50,10 +51,7 @@ const RefreshButton = ({ sessionId }: { sessionId: string }) => (
 const PurchasePage = async ({
   searchParams,
 }: {
-  // Keep compatibility with current usage (Promise) but allow object
-  searchParams:
-    | Promise<{ [key: string]: string | string[] | undefined }>
-    | { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) => {
   const params = await searchParams; // works if plain object too
   const sessionId = params?.session_id as string | undefined;
@@ -96,9 +94,7 @@ const PurchasePage = async ({
   }
 
   // Retrieve the session (expand to show details)
-  let session: Awaited<
-    ReturnType<typeof stripe.checkout.sessions.retrieve>
-  > | null = null;
+  let session: Stripe.Checkout.Session | null = null;
   let error: string | null = null;
   try {
     session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -108,8 +104,8 @@ const PurchasePage = async ({
         "payment_intent.payment_method",
         "invoice",
       ],
-    } as any);
-  } catch (e) {
+    });
+  } catch {
     error =
       "We couldn't verify the checkout session just now. Please try again.";
   }
@@ -117,10 +113,19 @@ const PurchasePage = async ({
   const handled = session?.metadata?.["handled"] === "true";
   const paymentStatus = session?.payment_status; // paid | unpaid | no_payment_required
   const status = session?.status; // open | complete | expired | null
-  const lineItems: any[] = (session as any)?.line_items?.data ?? [];
-  const subscription = session?.subscription as any | null;
-  const invoice = session?.invoice as any | null;
-  const pm = (session as any)?.payment_intent?.payment_method as any | null;
+  const lineItems: Stripe.LineItem[] =
+    ((
+      session as Stripe.Checkout.Session & {
+        line_items?: { data: Stripe.LineItem[] };
+      }
+    )?.line_items?.data as Stripe.LineItem[]) || [];
+  const subscription = session?.subscription as Stripe.Subscription | null;
+  const invoice = session?.invoice as Stripe.Invoice | null;
+  const pm = (
+    session as Stripe.Checkout.Session & {
+      payment_intent?: { payment_method?: Stripe.PaymentMethod };
+    }
+  )?.payment_intent?.payment_method as Stripe.PaymentMethod | null;
 
   const isProcessing =
     !handled && paymentStatus === "paid" && status === "complete";
@@ -174,8 +179,12 @@ const PurchasePage = async ({
               <h4 className="text-sm font-medium mb-2">Items</h4>
               <ul className="divide-y divide-border/60 rounded-md border border-border/60 overflow-hidden">
                 {lineItems.map((li, i) => {
-                  const prod = li.price?.product as any;
-                  const recurring = li.price?.recurring;
+                  const price = li.price as Stripe.Price | null | undefined;
+                  const prod = price?.product as Stripe.Product | string as
+                    | Stripe.Product
+                    | string
+                    | undefined;
+                  const recurring = price?.recurring;
                   return (
                     <li
                       key={li.id || i}
@@ -183,7 +192,9 @@ const PurchasePage = async ({
                     >
                       <div className="space-y-1">
                         <p className="font-medium leading-none">
-                          {prod?.name || li.description || "Item"}
+                          {typeof prod === "object"
+                            ? prod.name
+                            : li.description || "Item"}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {recurring
@@ -199,7 +210,7 @@ const PurchasePage = async ({
                       <div className="text-sm font-medium tabular-nums">
                         {formatAmount(
                           li.amount_total,
-                          li.currency || session?.currency
+                          li.currency || (session?.currency as string)
                         )}
                       </div>
                     </li>

@@ -9,12 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { client } from "@/lib/client";
-import { useAuth } from "@clerk/nextjs";
-import {
-  QueryClient,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RESTGetAPIGuildChannelsResult } from "discord-api-types/v10";
 import { Pen, Save, Trash } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -36,7 +31,6 @@ export const ChannelItem = ({
   guildId: string;
 }) => {
   const queryClient = useQueryClient();
-  const { getToken } = useAuth();
   const [editing, setEditing] = useState<boolean>(false);
   const [channel, setChannel] = useState<{
     name: string | null;
@@ -47,14 +41,9 @@ export const ChannelItem = ({
   const { mutate } = useMutation({
     mutationKey: [`save-${type}-channel`],
     mutationFn: async () => {
-      const token = await getToken();
       const res = await client.dash.setChannel.$post(
         { guildId: guildId, type, channelId: channel.id! },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        undefined
       );
 
       const data = await res.json();
@@ -91,14 +80,13 @@ export const ChannelItem = ({
         {editing ? (
           <Select
             onValueChange={(value) => {
-              const selectedChannel = allChannels?.filter(
-                (c) => c.id === value
-              )[0]!;
-
-              setChannel({
-                name: selectedChannel.name,
-                id: selectedChannel.id,
-              });
+              const selectedChannel = allChannels?.find((c) => c.id === value);
+              if (selectedChannel) {
+                setChannel({
+                  name: selectedChannel.name,
+                  id: selectedChannel.id,
+                });
+              }
             }}
             disabled={!allChannels}
           >

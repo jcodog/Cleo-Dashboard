@@ -1,10 +1,11 @@
 import { j } from "@/server/jstack";
 import { cors } from "hono/cors";
-import { authRouter } from "@/server/routers/auth-router";
+import { sessionRouter } from "@/server/routers/session-router";
 import { discordRouter } from "@/server/routers/discord-router";
 import { cleoRouter } from "@/server/routers/cleo-router";
 import { dashRouter } from "@/server/routers/dash-router";
 import { paymentRouter } from "@/server/routers/payment-router";
+import { healthRouter } from "@/server/routers/health-router";
 
 /**
  * This is your base API.
@@ -35,11 +36,12 @@ const api = j
  * All routers in /server/routers should be added here manually.
  */
 const appRouter = j.mergeRouters(api, {
-  auth: authRouter,
+  session: sessionRouter,
   discord: discordRouter,
   cleo: cleoRouter,
   dash: dashRouter,
   payment: paymentRouter,
+  health: healthRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,7 +1,7 @@
 "use client";
 
 import { Heading } from "@/components/Heading";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { client } from "@/lib/client";
 import { Servers } from "@/prisma/client";
-import { useAuth } from "@clerk/nextjs";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -24,10 +23,8 @@ interface InviteLinkProps {
 
 export const InviteLink = ({
   guild,
-  isDirty,
-  setDirtyAction,
-}: InviteLinkProps) => {
-  const { getToken } = useAuth();
+}: // isDirty, setDirtyAction intentionally unused for now (link editor WIP)
+InviteLinkProps) => {
   const initialInviteLink = guild.inviteLink || undefined;
   const [inviteLink, setInviteLink] = useState<string | undefined>(
     guild.inviteLink || undefined
@@ -36,14 +33,9 @@ export const InviteLink = ({
   const {} = useMutation({
     mutationKey: ["set-invite-link"],
     mutationFn: async () => {
-      const token = await getToken();
       const res = await client.dash.setGuildInvite.$post(
         { guildId: guild.id, inviteLink: inviteLink! },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        undefined
       );
       const json = await res.json();
       if (!json.success) {

@@ -2,7 +2,6 @@ import { Limits } from "@/prisma";
 import { dashProcedure, j } from "@/server/jstack";
 import {
   RESTGetAPICurrentUserGuildsResult,
-  RESTGetAPIGuildMemberResult,
   RESTGetAPIGuildResult,
   RESTGetAPIGuildChannelsResult,
 } from "discord-api-types/v10";
@@ -97,12 +96,13 @@ export const dashRouter = j.router({
         guilds: servers,
         message: "Retrieved sorted guilds list",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" && err && "message" in err
+          ? String((err as { message?: unknown }).message)
+          : "Internal error";
       console.error("getGuildList error:", err);
-      return c.json({
-        guilds: null,
-        message: err.message || "Internal error",
-      });
+      return c.json({ guilds: null, message });
     }
   }),
 
@@ -181,12 +181,13 @@ export const dashRouter = j.router({
               : "https://archive.org/download/discordprofilepictures/discordblue.png",
           },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("getHeaderInfo error:", err);
-        return c.json({
-          success: false,
-          error: err.message || "Internal error",
-        });
+        const message =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Internal error";
+        return c.json({ success: false, error: message });
       }
     }),
 
@@ -254,12 +255,13 @@ export const dashRouter = j.router({
             isOwner: user.discordId === guildData.owner_id,
           },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("getGuild error:", err);
-        return c.json({
-          success: false,
-          error: err.message || "Internal error",
-        });
+        const message =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Internal error";
+        return c.json({ success: false, error: message });
       }
     }),
 
@@ -365,12 +367,13 @@ export const dashRouter = j.router({
           data: { guild },
           message: "Set the invite link",
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Updating db error:", err);
-        return c.json({
-          success: false,
-          error: err.message || "Internal server error",
-        });
+        const message =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Internal server error";
+        return c.json({ success: false, error: message });
       }
     }),
 
@@ -466,12 +469,13 @@ export const dashRouter = j.router({
           success: true,
           data: { channels: result, allChannels },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("getGuildChannels error:", err);
-        return c.json({
-          success: false,
-          error: err.message || "Internal error",
-        });
+        const message =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Internal error";
+        return c.json({ success: false, error: message });
       }
     }),
 
@@ -653,4 +657,94 @@ export const dashRouter = j.router({
       });
     }
   ),
+  /**
+   * Returns combined profile information for the authenticated user.
+   * Includes:
+   *  - betterAuth user id (session user id)
+   *  - internal domain user id
+   *  - discordId (from domain user)
+   *  - email + name from Better Auth user record
+   *  - plan / tier for convenience
+   */
+  getProfile: dashProcedure.query(async ({ c, ctx: { session, user } }) => {
+    return c.json({
+      profile: {
+        authUserId: session.user.id,
+        // internal Users table id (domain id)
+        userId: user.id,
+        discordId: user.discordId,
+        email: session.user.email,
+        name: session.user.name,
+        username: user.username,
+        plan: user.plan,
+      },
+    });
+  }),
+  /**
+   * Allows a user to update their display name (Better Auth user.name) and/or email.
+   * Email changes are synced to both the Better Auth `user` table and the domain `Users` table.
+   */
+  updateProfile: dashProcedure
+    .input(
+      z
+        .object({
+          name: z.string().min(2).max(80).optional(),
+          email: z.string().email().max(120).optional(),
+        })
+        .refine((d) => d.name || d.email, {
+          message: "No changes provided",
+        })
+    )
+    .mutation(async ({ c, ctx: { db, session, user }, input }) => {
+      const authUserId = session.user.id;
+      const { name, email } = input;
+      // Build updates separately so we only touch the columns that changed.
+      const authUpdates: Record<string, string> = {};
+      if (name && name !== session.user.name) authUpdates.name = name.trim();
+      if (email && email !== session.user.email)
+        authUpdates.email = email.trim().toLowerCase();
+
+      if (Object.keys(authUpdates).length === 0) {
+        return c.json({ success: false, error: "No changes detected" });
+      }
+
+      try {
+        if (authUpdates.email) {
+          // Also sync to domain Users table (optional email field there)
+          await db.users.update({
+            where: { id: user.id },
+            data: { email: authUpdates.email },
+          });
+        }
+
+        // Update Better Auth user record.
+        await db.user.update({
+          where: { id: authUserId },
+          data: authUpdates,
+        });
+
+        return c.json({
+          success: true,
+          profile: {
+            authUserId,
+            userId: user.id,
+            discordId: user.discordId,
+            email: authUpdates.email || session.user.email,
+            name: authUpdates.name || session.user.name,
+            username: user.username,
+            plan: user.plan,
+          },
+        });
+      } catch (err: unknown) {
+        const rawMessage =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Failed to update profile";
+        const message = rawMessage.includes("P2002")
+          ? "Email already in use"
+          : rawMessage;
+        console.error("updateProfile error", err);
+        return c.json({ success: false, error: message });
+      }
+    }),
 });

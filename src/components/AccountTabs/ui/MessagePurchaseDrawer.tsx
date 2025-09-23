@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/drawer";
 import { client } from "@/lib/client";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Info, Lock, PlusCircle, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -21,19 +20,11 @@ import { toast } from "sonner";
 export const MessagePurchaseDrawer = () => {
   const router = useRouter();
   // Access Clerk token helper at the top level (Rules of Hooks compliant)
-  const { getToken } = useAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ["get-message-bundles"],
     queryFn: async () => {
-      const res = await client.payment.additionalMessageBundles.$get(
-        undefined,
-        {
-          headers: {
-            Authorization: `Bearer ${await getToken()}`,
-          },
-        }
-      );
+      const res = await client.payment.additionalMessageBundles.$get();
 
       const { product, message } = await res.json();
       if (!product) {
@@ -49,19 +40,12 @@ export const MessagePurchaseDrawer = () => {
   const { mutate } = useMutation({
     mutationKey: ["purchase-topup"],
     mutationFn: async (priceId: string) => {
-      const res = await client.payment.checkout.$post(
-        {
-          price: priceId,
-          type: "payment",
-          domain: process.env.NEXT_PUBLIC_APP_URL!,
-          path: "dashboard/account/usage",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${await getToken()}`,
-          },
-        }
-      );
+      const res = await client.payment.checkout.$post({
+        price: priceId,
+        type: "payment",
+        domain: process.env.NEXT_PUBLIC_APP_URL!,
+        path: "dashboard/account/usage",
+      });
 
       const { url, message } = await res.json();
       if (!url) {
@@ -147,7 +131,7 @@ export const MessagePurchaseDrawer = () => {
   return (
     <Drawer>
       <DrawerTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="w-full">
           <PlusCircle className="size-4" /> Get More
         </Button>
       </DrawerTrigger>
@@ -184,7 +168,7 @@ export const MessagePurchaseDrawer = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[...data.prices]
                   .sort((a, b) => a.amount - b.amount)
-                  .map((price, idx, arr) => (
+                  .map((price, idx) => (
                     <PriceCard
                       key={price.id}
                       priceId={price.id}

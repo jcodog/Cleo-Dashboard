@@ -84,7 +84,9 @@ export const POST = async (req: Request) => {
           session.id,
           { expand: ["data.price"] }
         );
-        lineItems = listed.data as any;
+        lineItems = listed.data.map(
+          (li) => li as Stripe.LineItem & { price?: Stripe.Price | null }
+        );
       } catch (err) {
         console.error("Failed to list line items for session", err);
         return new Response("Checkout session has no line items", {
@@ -105,7 +107,9 @@ export const POST = async (req: Request) => {
       // Aggregate top-up messages across eligible line items
       let totalTopup = 0;
       for (const item of lineItems) {
-        const price = (item as any).price as Stripe.Price | null;
+        const price =
+          (item as Stripe.LineItem & { price?: Stripe.Price | null }).price ??
+          null;
         if (!price?.id || price.unit_amount == null) continue;
 
         // Verify the price belongs to our Additional Messages product
@@ -186,7 +190,7 @@ export const POST = async (req: Request) => {
           status: 200,
           statusText: "TOP UP COMPLETED",
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to apply message top-up", err);
         return new Response("Internal error applying top-up", { status: 500 });
       }
