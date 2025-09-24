@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AiUsage } from "@/components/AccountTabs/AiUsage";
-import { LogOut, RefreshCw } from "lucide-react";
+import { LogOut, RefreshCw, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { client } from "@/lib/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ const btn = (base: string, extra?: string) =>
   }`;
 
 export default function DashboardAccountPage() {
+  const router = useRouter();
   const { useSession } = authClient;
   const { data: session, isPending, error, refetch } = useSession();
   const [signingOut, setSigningOut] = useState(false);
@@ -138,7 +140,43 @@ export default function DashboardAccountPage() {
     <section className="flex flex-1 justify-center p-4">
       <div className="w-full max-w-4xl space-y-8">
         <header className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label="Go back"
+              onClick={() => {
+                try {
+                  if (
+                    typeof document !== "undefined" &&
+                    document.referrer &&
+                    new URL(document.referrer).origin === window.location.origin
+                  ) {
+                    router.back();
+                    return;
+                  }
+                } catch {
+                  // ignore and fallback
+                }
+                router.push("/dashboard");
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+            <div className="ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/dashboard")}
+              >
+                Back to Dashboard
+              </Button>
+            </div>
+          </div>
           <p className="text-sm text-muted-foreground">
             Manage your Cleo identity, usage and session.
           </p>
