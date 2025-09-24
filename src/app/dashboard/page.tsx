@@ -124,7 +124,7 @@ const DashboardHomePage = () => {
           </Button>
         </div>
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-2">
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
