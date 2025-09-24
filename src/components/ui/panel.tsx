@@ -61,9 +61,9 @@ export const PanelHeader = ({
     )}
   >
     <div className="min-w-0">
-      <h3 className="text-base font-semibold tracking-tight sm:text-lg truncate">
+      <div className="text-base font-semibold tracking-tight sm:text-lg truncate">
         {title}
-      </h3>
+      </div>
       {description ? (
         <p className="text-xs text-muted-foreground leading-relaxed sm:text-sm">
           {description}

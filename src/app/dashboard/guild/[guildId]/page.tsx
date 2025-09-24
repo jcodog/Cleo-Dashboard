@@ -14,6 +14,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import UserButton from "@/components/UserButton";
 
 interface GuildDashPageProps {
   params: Promise<{
@@ -173,9 +175,9 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
       <p>Loading server info...</p>
     </section>
   ) : (
-    <section className="relative flex flex-1 flex-col items-center justify-center p-6">
-      <div className="flex flex-1 flex-col w-full max-w-6xl rounded-xl border border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.25)]">
-        <div className="flex w-full gap-4 p-5 items-center justify-between rounded-t-xl bg-gradient-to-b from-accent/60 to-accent/30 border-b border-border/60">
+    <section className="relative flex flex-1 min-h-0 flex-col items-center p-6">
+      <div className="flex h-full max-h-full w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.25)]">
+        <div className="flex w-full gap-4 p-5 items-center justify-between rounded-t-xl bg-gradient-to-b from-accent/60 to-accent/30 border-b border-border/60 shrink-0">
           <div className="flex gap-4 items-center justify-start min-w-0">
             <div className="relative h-11 w-11 shrink-0">
               <Image
@@ -204,8 +206,9 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
             </Button>
           </div>
         </div>
-        <div className="flex flex-1">
-          <div className="flex flex-col flex-1 w-60 min-w-60 max-w-60 py-4 gap-2 bg-accent/20 rounded-bl-xl justify-between border-r border-border/60">
+
+        <div className="flex flex-1 min-h-0">
+          <div className="flex flex-col w-60 min-w-60 max-w-60 py-4 gap-2 bg-accent/20 rounded-bl-xl justify-between border-r border-border/60 shrink-0">
             <ul className="flex flex-col gap-1.5 px-2 select-none">
               {tabs.map((tab) => (
                 <li
@@ -251,27 +254,21 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
             </ul>
             <div className="flex justify-between px-4 pt-4 border-t border-border/60">
               {session ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => (window.location.href = "/dashboard/account")}
-                  className="flex items-center gap-2"
-                >
-                  <span className="truncate max-w-24">
-                    {session.user.name || session.user.email || "Account"}
-                  </span>
-                </Button>
+                <UserButton namePosition="right" showName={true} />
               ) : null}
               <ThemeToggle />
             </div>
           </div>
-          <div className="flex flex-1 flex-col w-full items-center justify-center gap-4 p-4 overflow-hidden">
-            <ActiveComponent
-              guildId={guildId}
-              setDirtyAction={setIsDirty}
-              isDirty={isDirty}
-              getTokenAction={async () => null}
-            />
+
+          <div className="flex flex-1 min-h-0 w-full items-stretch p-4 overflow-hidden">
+            <ScrollArea className="w-full h-full overflow-x-hidden [scrollbar-gutter:stable]">
+              <ActiveComponent
+                guildId={guildId}
+                setDirtyAction={setIsDirty}
+                isDirty={isDirty}
+                getTokenAction={async () => null}
+              />
+            </ScrollArea>
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@ const DashboardLayout = ({
     <>
       {/* navbar */}
       {/* sidebar? */}
-      <main className="relative flex flex-1 flex-col p-4 sm:p-6">
+      <main className="relative flex flex-1 min-h-0 flex-col p-4 sm:p-6 overflow-hidden">
         {/* Ambient background component for unified visuals with landing */}
         <AmbientBackground variant="app" />
         {children}

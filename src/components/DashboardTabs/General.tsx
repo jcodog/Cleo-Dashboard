@@ -49,7 +49,10 @@ export const General = ({
           title={<Heading className="text-2xl">Overview</Heading>}
           description="High level server stats and configuration panels."
         />
-        <div id="stats-overview" className="flex flex-wrap gap-4 mt-2">
+        <div
+          id="stats-overview"
+          className="grid md:grid-cols-3 lg:grid-cols-5 gap-4 mt-2"
+        >
           {[
             {
               icon: User,
@@ -121,16 +124,23 @@ interface StatCardProps {
   value: string | number | null | undefined;
 }
 const StatCard = ({ icon: Icon, label, value }: StatCardProps) => (
-  <div className="group relative flex min-w-40 flex-col gap-2 rounded-lg border border-border/50 bg-gradient-to-b from-card/80 to-card/60 px-4 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.25)] backdrop-blur-sm">
-    <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-muted-foreground">
-      <span className="flex size-6 items-center justify-center rounded-md bg-accent/70 ring-1 ring-border/70 shadow-sm group-hover:bg-accent transition-colors">
+  <div
+    className="group relative flex w-full flex-col gap-2 rounded-md border border-border/50 bg-gradient-to-b from-card/75 via-card/60 to-card/50 p-3 md:p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_1px_2px_-1px_rgba(0,0,0,0.4),0_2px_8px_-4px_rgba(0,0,0,0.45)] backdrop-blur-sm overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-0 transition-colors"
+    tabIndex={0}
+  >
+    <div className="flex items-center gap-2 text-[11px] font-medium tracking-wide text-muted-foreground">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-accent/70 ring-1 ring-border/70 shadow-sm transition-colors group-hover:bg-accent">
         <Icon className="size-3.5" />
       </span>
-      {label}
+      <span className="truncate">{label}</span>
     </div>
     <p className="text-2xl font-semibold font-mono tabular-nums leading-none">
       {value ?? "-"}
     </p>
-    <div className="absolute inset-0 -z-10 rounded-[inherit] opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(circle_at_30%_20%,oklch(0.985_0_0)_0%,transparent_60%)] dark:bg-[radial-gradient(circle_at_30%_20%,oklch(0.205_0_0)_0%,transparent_60%)]" />
+    {/* Hover / sheen layers */}
+    <div className="pointer-events-none absolute inset-0 -z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,oklch(0.98_0_0)_0%,transparent_65%)] dark:bg-[radial-gradient(circle_at_30%_25%,oklch(0.24_0_0)_0%,transparent_60%)]" />
+    </div>
+    <div className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(to_top,rgba(255,255,255,0.06),transparent)] dark:bg-[linear-gradient(to_top,rgba(255,255,255,0.04),transparent)]" />
   </div>
 );
