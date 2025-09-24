@@ -135,7 +135,7 @@ export const createAuth = (env: AuthEnv) => {
     baseURL: env.NEXT_PUBLIC_SITE_URL ?? "https://cleoai.cloud",
     cookies: {
       domain: normalizedCookieDomain,
-      sameSite: "lax",
+      sameSite: "none",
       secure: secureFlag,
     },
     events: {

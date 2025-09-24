@@ -18,7 +18,11 @@ const api = j
   .basePath("/api")
   .use(
     cors({
-      origin: (origin) => origin ?? "https://cleoai.cloud",
+      origin: (origin) => {
+    if (!origin) return 'https://cleoai.cloud';
+    if (/^https:\\/\\/(api\\.)?cleoai\\.cloud$/.test(origin)) return origin;
+    return 'https://cleoai.cloud'; // fallback allow primary
+  },
       credentials: true,
       allowHeaders: [
         "x-is-superjson",
