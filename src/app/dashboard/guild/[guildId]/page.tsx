@@ -261,7 +261,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
           </div>
 
           <div className="flex flex-1 min-h-0 w-full items-stretch p-4 overflow-hidden">
-            <ScrollArea className="w-full h-full overflow-x-hidden [scrollbar-gutter:stable]">
+            <ScrollArea className="w-full h-full overflow-x-hidden">
               <ActiveComponent
                 guildId={guildId}
                 setDirtyAction={setIsDirty}
