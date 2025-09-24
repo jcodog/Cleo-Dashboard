@@ -18,7 +18,7 @@ const api = j
   .basePath("/api")
   .use(
     cors({
-      origin: (origin) => origin,
+      origin: (origin) => origin ?? "https://cleoai.cloud",
       credentials: true,
       allowHeaders: [
         "x-is-superjson",

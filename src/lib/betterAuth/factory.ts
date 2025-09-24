@@ -32,63 +32,69 @@ export const createAuth = (env: AuthEnv) => {
   //  - SameSite can stay "lax" because subdomains count as same‑site; do NOT use default host‑only cookie.
   // If COOKIE_DOMAIN is misconfigured we attempt to repair and emit a console.warn once.
   let normalizedCookieDomain: string | undefined;
-  if (process.env.NODE_ENV === "production") {
-    const warned: string[] = [];
-    const raw = (env.COOKIE_DOMAIN || "").trim();
+  const warned: string[] = [];
+  const raw = (env.COOKIE_DOMAIN || "").trim();
 
-    if (raw) {
-      // Strip protocol
-      let d: string = raw.replace(/^https?:\/\//i, "");
-      // Remove path/query if accidentally provided (avoid array indexing to satisfy noUncheckedIndexedAccess)
-      const firstSlash = d.indexOf("/");
-      if (firstSlash !== -1) d = d.slice(0, firstSlash);
-      // Remove port if present
-      const firstColon = d.indexOf(":");
-      if (firstColon !== -1) d = d.slice(0, firstColon);
-      // Convert leading dot variants to plain
-      d = d.replace(/^\.+/, "");
-      // Validate basic shape – must contain a dot and only allowed characters
-      if (!/^[A-Za-z0-9.-]+$/.test(d) || !d.includes(".")) {
-        warned.push(
-          `Provided COOKIE_DOMAIN '${raw}' is invalid; expected e.g. 'cleoai.cloud'.`
-        );
-      } else {
-        normalizedCookieDomain = d;
-      }
-    }
-
-    // Derive from NEXT_PUBLIC_SITE_URL if still undefined
-    if (!normalizedCookieDomain && env.NEXT_PUBLIC_SITE_URL) {
-      try {
-        const u = new URL(env.NEXT_PUBLIC_SITE_URL);
-        const host = u.hostname; // already no protocol
-        // If host is a bare domain (e.g. cleoai.cloud) keep it, else strip first label (api., www.)
-        const parts = host.split(".");
-        if (parts.length > 2) {
-          normalizedCookieDomain = parts.slice(-2).join(".");
-        } else {
-          normalizedCookieDomain = host;
-        }
-      } catch (e) {
-        warned.push("Could not derive cookie domain from NEXT_PUBLIC_SITE_URL");
-      }
-    }
-
-    if (
-      normalizedCookieDomain &&
-      normalizedCookieDomain.startsWith("localhost")
-    ) {
-      // Never set a Domain attribute for localhost – browsers reject/ignore it and host-only behaviour is desired.
+  if (raw) {
+    let d: string = raw.replace(/^https?:\/\//i, "");
+    const firstSlash = d.indexOf("/");
+    if (firstSlash !== -1) d = d.slice(0, firstSlash);
+    const firstColon = d.indexOf(":");
+    if (firstColon !== -1) d = d.slice(0, firstColon);
+    d = d.replace(/^\.+/, "");
+    if (!/^[A-Za-z0-9.-]+$/.test(d) || !d.includes(".")) {
       warned.push(
-        `Omitting Domain attribute for localhost ('${normalizedCookieDomain}'); cross-subdomain sharing is not needed in local dev.`
+        `Provided COOKIE_DOMAIN '${raw}' is invalid; expected e.g. 'cleoai.cloud'.`
       );
-      normalizedCookieDomain = undefined;
+    } else {
+      normalizedCookieDomain = d;
     }
+  }
 
-    if (warned.length) {
-      // Log once (Better Auth creates singleton) – aids debugging mis-config quickly in Cloudflare/Vercel logs.
-      console.warn("[auth:cookies]", warned.join(" "));
+  if (!normalizedCookieDomain && env.NEXT_PUBLIC_SITE_URL) {
+    try {
+      const u = new URL(env.NEXT_PUBLIC_SITE_URL);
+      const host = u.hostname;
+      const parts = host.split(".");
+      normalizedCookieDomain =
+        parts.length > 2 ? parts.slice(-2).join(".") : host;
+    } catch {
+      warned.push("Could not derive cookie domain from NEXT_PUBLIC_SITE_URL");
     }
+  }
+
+  if (
+    normalizedCookieDomain &&
+    normalizedCookieDomain.startsWith("localhost")
+  ) {
+    warned.push(
+      `Omitting Domain attribute for localhost ('${normalizedCookieDomain}'); cross-subdomain sharing is not needed in local dev.`
+    );
+    normalizedCookieDomain = undefined;
+  }
+
+  if (warned.length) {
+    console.warn("[auth:cookies]", warned.join(" "));
+  }
+
+  const secureFlag = (() => {
+    if (typeof env.NEXT_PUBLIC_SITE_URL === "string") {
+      try {
+        return new URL(env.NEXT_PUBLIC_SITE_URL).protocol === "https:";
+      } catch {
+        /* ignore */
+      }
+    }
+    return process.env.NODE_ENV === "production"; // fallback
+  })();
+
+  if (process.env.BETTER_AUTH_DEBUG_COOKIES === "1") {
+    console.log("[auth:cookies:config]", {
+      normalizedCookieDomain,
+      secureFlag,
+      siteUrl: env.NEXT_PUBLIC_SITE_URL,
+      rawCookieDomain: raw || null,
+    });
   }
 
   return betterAuth({
@@ -130,7 +136,7 @@ export const createAuth = (env: AuthEnv) => {
     cookies: {
       domain: normalizedCookieDomain,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: secureFlag,
     },
     events: {
       user: {
