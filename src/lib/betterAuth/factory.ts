@@ -123,7 +123,7 @@ export const createAuth = (env: AuthEnv) => {
     baseURL: env.NEXT_PUBLIC_SITE_URL ?? "https://cleoai.cloud",
     cookies: {
       domain: normalizedCookieDomain,
-      sameSite: "none",
+      sameSite: "lax",
     },
     events: {
       user: {
@@ -193,5 +193,17 @@ export const createAuth = (env: AuthEnv) => {
         },
       },
     },
+    advanced: {
+      crossSubDomainCookies: {
+        enabled: true,
+        domain: normalizedCookieDomain,
+      },
+    },
+    trustedOrigins: [
+      "https://cleoai.cloud",
+      "https://api.cleoai.cloud",
+      "http://localhost:3000",
+      "http://localhost:8080",
+    ],
   });
 };
