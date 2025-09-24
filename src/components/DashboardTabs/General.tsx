@@ -43,17 +43,13 @@ export const General = ({
   });
 
   return (
-    <div className="flex flex-col flex-1 w-full gap-6 py-2 px-1 md:px-2">
+    <div className="flex flex-col flex-1 w-full overflow-y-auto gap-6 py-2 px-1 md:px-2">
       <Panel variant="subtle" className="border-none shadow-none p-3 md:p-4">
         <PanelHeader
           title={<Heading className="text-2xl">Overview</Heading>}
           description="High level server stats and configuration panels."
         />
-        {/* Stats overview: single row on large screens (no wrap) and wrapped into two rows on medium where width is constrained. */}
-        <div
-          id="stats-overview"
-          className="flex flex-wrap gap-4 mt-2 lg:flex-nowrap"
-        >
+        <div id="stats-overview" className="flex flex-wrap gap-4 mt-2">
           {[
             {
               icon: User,
