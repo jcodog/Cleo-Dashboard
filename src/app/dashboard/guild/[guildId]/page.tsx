@@ -5,6 +5,7 @@ import { General } from "@/components/DashboardTabs/General";
 import { Heading } from "@/components/Heading";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { client } from "@/lib/client";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/authClient";
@@ -265,13 +266,22 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
               <ThemeToggle />
             </div>
           </div>
-          <div className="flex flex-1 flex-col w-full items-center justify-center gap-4 p-4">
-            <ActiveComponent
-              guildId={guildId}
-              setDirtyAction={setIsDirty}
-              isDirty={isDirty}
-              getTokenAction={async () => null}
-            />
+          {/* Content area: constrain height so card itself doesn't force page scroll. */}
+          <div className="flex flex-1 flex-col w-full p-0 md:p-0">
+            {/* For medium screens we enable internal scrolling; for large+ we allow natural height (single row stats) without extra ScrollArea wrapper styles interfering. */}
+            <ScrollArea
+              /* At lg and above we disable the explicit height so content grows naturally within overall page; below lg we cap height to viewport minus header offsets. */
+              className="flex-1 md:max-h-[calc(100vh-12rem)] lg:max-h-none md:px-4 md:py-4"
+            >
+              <div className="flex flex-col flex-1 w-full items-center justify-start gap-4">
+                <ActiveComponent
+                  guildId={guildId}
+                  setDirtyAction={setIsDirty}
+                  isDirty={isDirty}
+                  getTokenAction={async () => null}
+                />
+              </div>
+            </ScrollArea>
           </div>
         </div>
       </div>
