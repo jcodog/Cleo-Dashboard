@@ -77,21 +77,9 @@ export const createAuth = (env: AuthEnv) => {
     console.warn("[auth:cookies]", warned.join(" "));
   }
 
-  const secureFlag = (() => {
-    if (typeof env.NEXT_PUBLIC_SITE_URL === "string") {
-      try {
-        return new URL(env.NEXT_PUBLIC_SITE_URL).protocol === "https:";
-      } catch {
-        /* ignore */
-      }
-    }
-    return process.env.NODE_ENV === "production"; // fallback
-  })();
-
   if (process.env.BETTER_AUTH_DEBUG_COOKIES === "1") {
     console.log("[auth:cookies:config]", {
       normalizedCookieDomain,
-      secureFlag,
       siteUrl: env.NEXT_PUBLIC_SITE_URL,
       rawCookieDomain: raw || null,
     });
@@ -136,7 +124,6 @@ export const createAuth = (env: AuthEnv) => {
     cookies: {
       domain: normalizedCookieDomain,
       sameSite: "none",
-      secure: secureFlag,
     },
     events: {
       user: {

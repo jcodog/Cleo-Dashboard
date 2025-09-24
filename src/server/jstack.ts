@@ -6,6 +6,7 @@ import { RESTGetAPIUserResult } from "discord-api-types/v10";
 import { loadStripe } from "@/lib/stripe";
 import { getWorkerAuth } from "@/lib/betterAuth/workers";
 import { getDiscordAccessToken } from "@/lib/betterAuth/discordToken";
+import { secureHeaders } from "hono/secure-headers";
 
 export interface Env {
   Bindings: {
@@ -40,8 +41,7 @@ const baseMiddleware = j.middleware(async ({ c, next }) => {
 const authMiddleware = j.middleware(async ({ c, next }) => {
   const auth = getWorkerAuth(c);
   // Use Better Auth helper to read session from the incoming request headers.
-  console.log("Incoming Cookie header", c.req.header("Cookie"));
-  console.log("Incoming raw headers", JSON.stringify(c.req.raw.headers));
+  console.log(JSON.stringify(c));
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
   if (!session) {
     throw new HTTPException(401, { message: "Unauthorized: No valid session" });
