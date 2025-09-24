@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/prisma";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { loadStripe } from "@/lib/stripe";
 
 function safeHostname(url?: string) {
   if (!url) return undefined;
@@ -19,6 +20,7 @@ export type AuthEnv = {
   COOKIE_DOMAIN?: string;
   DISCORD_CLIENT_ID?: string;
   DISCORD_CLIENT_SECRET?: string;
+  STRIPE_SECRET_KEY?: string;
 };
 
 export const createAuth = (env: AuthEnv) => {
@@ -85,6 +87,11 @@ export const createAuth = (env: AuthEnv) => {
     });
   }
 
+  const stripeSecret = env.STRIPE_SECRET_KEY;
+  const stripe = stripeSecret
+    ? loadStripe({ secretKey: stripeSecret })
+    : undefined;
+
   return betterAuth({
     secret: env.BETTER_AUTH_SECRET ?? "",
     database: prismaAdapter(db, { provider: "postgresql" }),
@@ -142,7 +149,28 @@ export const createAuth = (env: AuthEnv) => {
             const existing = await prisma.users.findFirst({
               where: { extId: user.id },
             });
-            if (existing) return;
+            if (existing) {
+              // Ensure Stripe customer exists if we now have a key configured
+              if (stripe && !existing.customerId) {
+                try {
+                  const customer = await stripe.customers.create({
+                    email: existing.email || undefined,
+                    name: existing.username || undefined,
+                    metadata: { extId: existing.extId || "" },
+                  });
+                  await prisma.users.update({
+                    where: { id: existing.id },
+                    data: { customerId: customer.id },
+                  });
+                } catch (e) {
+                  console.error(
+                    "[better-auth:user.created] stripe backfill failed",
+                    e
+                  );
+                }
+              }
+              return;
+            }
             const discordAccount = await prisma.account.findFirst({
               where: { userId: user.id, providerId: "discord" },
             });
@@ -178,7 +206,7 @@ export const createAuth = (env: AuthEnv) => {
                 .catch(() => null);
               attempt++;
             }
-            await prisma.users.create({
+            const created = await prisma.users.create({
               data: {
                 extId: user.id,
                 username: username as string,
@@ -187,6 +215,30 @@ export const createAuth = (env: AuthEnv) => {
                 limits: { create: { date: new Date() } },
               },
             });
+
+            // Create & attach Stripe customer (idempotent-ish)
+            if (stripe) {
+              try {
+                const customer = await stripe.customers.create({
+                  email: created.email || undefined,
+                  name: created.username || undefined,
+                  metadata: { extId: created.extId || created.id },
+                });
+                await prisma.users.update({
+                  where: { id: created.id },
+                  data: { customerId: customer.id },
+                });
+              } catch (e) {
+                console.error(
+                  "[better-auth:user.created] stripe customer create failed",
+                  e
+                );
+              }
+            } else {
+              console.warn(
+                "[better-auth:user.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
+              );
+            }
           } catch (err: unknown) {
             console.error("[better-auth:user.created] provisioning error", err);
           }

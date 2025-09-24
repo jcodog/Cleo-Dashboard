@@ -19,6 +19,7 @@ export const getWorkerAuth = (c: ContextWithSuperJSON<Env, any, {}>) => {
       COOKIE_DOMAIN: e.COOKIE_DOMAIN,
       DISCORD_CLIENT_ID: e.DISCORD_CLIENT_ID ?? "",
       DISCORD_CLIENT_SECRET: e.DISCORD_CLIENT_SECRET ?? "",
+      STRIPE_SECRET_KEY: e.STRIPE_SECRET_KEY ?? "",
     });
   }
 
