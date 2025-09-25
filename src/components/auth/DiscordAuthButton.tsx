@@ -40,7 +40,7 @@ export const DiscordAuthButton: React.FC<DiscordAuthButtonProps> = ({
     >
       <SiDiscord className="size-4" />
       {children || (loading ? "Redirecting..." : "Continue with Discord")}
-      {lastMethod === "email" && <Badge className="ml-2">Last</Badge>}
+      {lastMethod === "discord" && <Badge className="ml-2">Last</Badge>}
     </Button>
   );
 };
