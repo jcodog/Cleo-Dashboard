@@ -21,7 +21,7 @@ export default async function Home() {
       {/* Ambient background shared with app */}
       <AmbientBackground variant="landing" />
 
-      <ScrollArea className="w-full h-full overflow-x-hidden">
+      <ScrollArea className="w-full h-full overflow-x-hidden flex items-center justify-center">
         {/* Hero Section */}
         <div
           id="hero"

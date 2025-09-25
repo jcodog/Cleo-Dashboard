@@ -1,0 +1,5 @@
+procs:
+  cleo_dash-front:
+    shell: "pnpm dev"
+  cleo_dash-back:
+    shell: "pnpm wrangler dev"
