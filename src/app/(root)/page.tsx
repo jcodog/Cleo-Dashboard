@@ -22,7 +22,7 @@ export default async function Home() {
       <AmbientBackground variant="landing" />
 
       <ScrollArea className="w-full h-full overflow-x-hidden">
-        <div className="flex items-center justify-center w-full">
+        <div className="flex flex-col items-center justify-center w-full">
           {/* Hero Section */}
           <div
             id="hero"
@@ -140,6 +140,7 @@ export default async function Home() {
               </div>
             </div>
           </div>
+          {/* TODO: add something to add spacing at bottom of features section so that the last item is not touching the bottom of the screen on mobiles */}
         </div>
       </ScrollArea>
 
