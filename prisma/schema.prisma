@@ -5,242 +5,244 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-    provider = "prisma-client-js"
-    output   = "../src/prisma"
+  provider = "prisma-client-js"
+  output   = "../src/prisma"
 }
 
 datasource db {
-    provider  = "postgresql"
-    url       = env("DATABASE_URL")
-    directUrl = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Plans {
-    FREE
-    PREMIUM // 0 premium server included. 500 ai messages a day.
-    PREMIUMPLUS // 1 premium server included. 1000 ai messages a day.
-    PRO // 3 premium servers included. 1500 ai messages a day.
+  FREE
+  PREMIUM // 0 premium server included. 500 ai messages a day.
+  PREMIUMPLUS // 1 premium server included. 1000 ai messages a day.
+  PRO // 3 premium servers included. 1500 ai messages a day.
 }
 
 enum LogLevel {
-    NONE // no logging at all
-    MINIMAL // only moderator commands like ban and kick
-    MEDIUM // included deleted messages and join/leave
-    MAXIMUM // include edited messages and user updates (username, role etc.)
+  NONE // no logging at all
+  MINIMAL // only moderator commands like ban and kick
+  MEDIUM // included deleted messages and join/leave
+  MAXIMUM // include edited messages and user updates (username, role etc.)
 }
 
 enum Sources {
-    DISCORD
-    DASHBOARD
+  DISCORD
+  DASHBOARD
 }
 
 enum IncidentsType {
-    WARN
-    KICK
-    BAN
+  WARN
+  KICK
+  BAN
 }
 
 enum IncidentsStatus {
-    OPEN
-    APPEALED
-    CLOSED
-    REVOKED
+  OPEN
+  APPEALED
+  CLOSED
+  REVOKED
 }
 
 enum Role {
-    staff
-    user
+  staff
+  user
 }
 
 enum ProductType {
-    onetime
-    subscription
+  onetime
+  subscription
 }
 
 model Users {
-    id                   String                @id @default(cuid())
-    username             String                @unique
-    email                String?               @unique
-    extId                String?               @unique
-    discordId            String                @unique
-    role                 Role                  @default(user)
-    customerId           String?               @unique
-    premiumSubscriptions PremiumSubscriptions?
-    plan                 Plans                 @default(FREE)
-    limits               Limits?
-    premiumServers       Servers[]
-    cleoPersonalityName  String?
-    cleoPersonalityId    String?
-    cleoPersonality      CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id], onDelete: SetNull)
+  id                   String                @id @default(cuid())
+  username             String                @unique
+  email                String?               @unique
+  extId                String?               @unique
+  discordId            String                @unique
+  role                 Role                  @default(user)
+  customerId           String?               @unique
+  premiumSubscriptions PremiumSubscriptions?
+  plan                 Plans                 @default(FREE)
+  limits               Limits?
+  premiumServers       Servers[]
+  cleoPersonalityName  String?
+  cleoPersonalityId    String?
+  cleoPersonality      CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id], onDelete: SetNull)
 }
 
 model Limits {
-    id                  String   @id
-    date                DateTime
-    aiUsed              Int      @default(0)
-    aiLimit             Int      @default(5)
-    additionalMessages  Int      @default(0)
-    premiumServers      Int      @default(0)
-    premiumServerLimmit Int      @default(0)
-    user                Users    @relation(fields: [id], references: [id], onDelete: Cascade)
+  id                  String   @id
+  date                DateTime
+  aiUsed              Int      @default(0)
+  aiLimit             Int      @default(5)
+  additionalMessages  Int      @default(0)
+  premiumServers      Int      @default(0)
+  premiumServerLimmit Int      @default(0)
+  user                Users    @relation(fields: [id], references: [id], onDelete: Cascade)
 }
 
 model Servers {
-    id                  String                @id
-    name                String
-    ownerId             String
-    icon                String?
-    isPremium           Boolean               @default(false)
-    premiumAddedBy      String?
-    premiumUser         Users?                @relation(fields: [premiumAddedBy], references: [discordId], onDelete: SetNull)
-    aiEnabled           Boolean               @default(false)
-    welcomeChannel      String?
-    announcementChannel String?
-    updatesChannel      String?
-    logsChannel         String?
-    logLevel            LogLevel              @default(NONE)
-    inviteLink          String?
-    inviteCode          String?
-    lastOpened          DateTime?
-    cleoPersonalityName String?
-    cleoPersonalityId   String?
-    cleoPersonality     CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id], onDelete: SetNull)
-    AutomodConfig       AutomodConfig[]
-    ServerSubscriptions ServerSubscriptions[]
+  id                  String                @id
+  name                String
+  ownerId             String
+  icon                String?
+  isPremium           Boolean               @default(false)
+  premiumAddedBy      String?
+  premiumUser         Users?                @relation(fields: [premiumAddedBy], references: [discordId], onDelete: SetNull)
+  aiEnabled           Boolean               @default(false)
+  welcomeChannel      String?
+  announcementChannel String?
+  updatesChannel      String?
+  logsChannel         String?
+  logLevel            LogLevel              @default(NONE)
+  inviteLink          String?
+  inviteCode          String?
+  lastOpened          DateTime?
+  cleoPersonalityName String?
+  cleoPersonalityId   String?
+  cleoPersonality     CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id], onDelete: SetNull)
+  AutomodConfig       AutomodConfig[]
+  ServerSubscriptions ServerSubscriptions[]
 
-    @@index([lastOpened])
+  @@index([lastOpened])
 }
 
 model PremiumSubscriptions {
-    id        String   @id
-    user      Users    @relation(fields: [id], references: [id], onDelete: Cascade)
-    tier      Plans
-    startDate DateTime @default(now())
-    endDate   DateTime @default(dbgenerated("CURRENT_TIMESTAMP + INTERVAL '1 month'"))
-    source    Sources
+  id        String   @id
+  user      Users    @relation(fields: [id], references: [id], onDelete: Cascade)
+  tier      Plans
+  startDate DateTime @default(now())
+  endDate   DateTime @default(dbgenerated("CURRENT_TIMESTAMP + INTERVAL '1 month'"))
+  source    Sources
 }
 
 model ServerSubscriptions {
-    id             String   @id
-    server         Servers  @relation(fields: [id], references: [id])
-    startDate      DateTime @default(now())
-    endDate        DateTime @default(dbgenerated("CURRENT_TIMESTAMP + INTERVAL '1 month'"))
-    source         Sources
-    subscriptionId String
+  id             String   @id
+  server         Servers  @relation(fields: [id], references: [id])
+  startDate      DateTime @default(now())
+  endDate        DateTime @default(dbgenerated("CURRENT_TIMESTAMP + INTERVAL '1 month'"))
+  source         Sources
+  subscriptionId String
 }
 
 model ErrorLog {
-    id         String   @id @default(cuid())
-    process    String
-    message    String
-    stackTrace String
-    timestamp  DateTime @default(now())
+  id         String   @id @default(cuid())
+  process    String
+  message    String
+  stackTrace String
+  timestamp  DateTime @default(now())
 }
 
 model Incidents {
-    id          String          @id @default(cuid())
-    serverId    String
-    userId      String
-    moderatorId String
-    type        IncidentsType
-    reason      String
-    timestamp   DateTime        @default(now())
-    status      IncidentsStatus @default(OPEN)
+  id          String          @id @default(cuid())
+  serverId    String
+  userId      String
+  moderatorId String
+  type        IncidentsType
+  reason      String
+  timestamp   DateTime        @default(now())
+  status      IncidentsStatus @default(OPEN)
 }
 
 model CleoPersonalities {
-    id           String    @id @default(cuid())
-    name         String
-    systemPrompt String
-    Servers      Servers[]
-    Users        Users[]
+  id           String    @id @default(cuid())
+  name         String
+  systemPrompt String
+  Servers      Servers[]
+  Users        Users[]
 
-    @@unique([name, id])
+  @@unique([name, id])
 }
 
 model Products {
-    id     String      @id // The stripe product id
-    name   String      @unique
-    type   ProductType
-    prices Prices[]
+  id     String      @id // The stripe product id
+  name   String      @unique
+  type   ProductType
+  prices Prices[]
 }
 
 model Prices {
-    id        String   @id // The stripe price id
-    amount    Int
-    default   Boolean  @default(false)
-    productId String
-    product   Products @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String   @id // The stripe price id
+  amount    Int
+  default   Boolean  @default(false)
+  productId String
+  product   Products @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model AutomodConfig {
-    id              String   @id @default(cuid())
-    active          Boolean  @default(false)
-    profanity       Boolean  @default(false)
-    matureContent   Boolean  @default(false)
-    links           Boolean  @default(false)
-    ignoredChannels String[] @default([])
-    approvedLinks   String[] @default([])
-    guildId         String   @unique
-    guild           Servers  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  active          Boolean  @default(false)
+  profanity       Boolean  @default(false)
+  matureContent   Boolean  @default(false)
+  links           Boolean  @default(false)
+  ignoredChannels String[] @default([])
+  approvedLinks   String[] @default([])
+  guildId         String   @unique
+  guild           Servers  @relation(fields: [guildId], references: [id], onDelete: Cascade)
 }
 
 model User {
-    id            String    @id
-    name          String
-    email         String
-    emailVerified Boolean   @default(false)
-    image         String?
-    createdAt     DateTime  @default(now())
-    updatedAt     DateTime  @default(now()) @updatedAt
-    sessions      Session[]
-    accounts      Account[]
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  sessions      Session[]
+  accounts      Account[]
 
-    @@unique([email])
-    @@map("user")
+  lastLoginMethod String?
+
+  @@unique([email])
+  @@map("user")
 }
 
 model Session {
-    id        String   @id
-    expiresAt DateTime
-    token     String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    ipAddress String?
-    userAgent String?
-    userId    String
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([token])
-    @@map("session")
+  @@unique([token])
+  @@map("session")
 }
 
 model Account {
-    id                    String    @id
-    accountId             String
-    providerId            String
-    userId                String
-    user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-    accessToken           String?
-    refreshToken          String?
-    idToken               String?
-    accessTokenExpiresAt  DateTime?
-    refreshTokenExpiresAt DateTime?
-    scope                 String?
-    password              String?
-    createdAt             DateTime  @default(now())
-    updatedAt             DateTime  @updatedAt
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-    @@map("account")
+  @@map("account")
 }
 
 model Verification {
-    id         String   @id
-    identifier String
-    value      String
-    expiresAt  DateTime
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @default(now()) @updatedAt
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 
-    @@map("verification")
+  @@map("verification")
 }

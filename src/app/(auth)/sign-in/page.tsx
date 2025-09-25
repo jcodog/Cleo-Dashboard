@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import DiscordAuthButton from "@/components/auth/DiscordAuthButton";
 
 function SignInInner() {
-  const { useSession } = authClient;
+  const { useSession, getLastUsedLoginMethod } = authClient;
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,7 +28,7 @@ function SignInInner() {
   })();
   const [loading, setLoading] = useState(false);
 
-  // Removed debug logs
+  const lastUsed = getLastUsedLoginMethod();
 
   // If already authenticated, redirect immediately (respect redirect param)
   useEffect(() => {
@@ -86,6 +86,7 @@ function SignInInner() {
             onClick={handleDiscord}
             loading={loading}
             disabled={isPending}
+            lastMethod={lastUsed ?? undefined}
           />
         )}
         <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">

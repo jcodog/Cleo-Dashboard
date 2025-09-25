@@ -2,6 +2,7 @@ import { getDb } from "@/lib/prisma";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { loadStripe } from "@/lib/stripe";
+import { lastLoginMethod } from "better-auth/plugins";
 
 function safeHostname(url?: string) {
   if (!url) return undefined;
@@ -256,6 +257,13 @@ export const createAuth = (env: AuthEnv) => {
       "https://api.cleoai.cloud",
       "http://localhost:3000",
       "http://localhost:8080",
+    ],
+    plugins: [
+      lastLoginMethod({
+        cookieName: "better-auth.last_used_login_method",
+        maxAge: 60 * 60 * 24 * 90,
+        storeInDatabase: true,
+      }),
     ],
   });
 };
