@@ -144,10 +144,7 @@ export const discordRouter = j.router({
       })
     )
     .mutation(async ({ c, ctx, input }) => {
-      const { session, kv } = ctx as {
-        session: { user: { id: string } };
-        kv: KVNamespace;
-      };
+      const { session, kv } = ctx;
       const { mode, guildId, discordId } = input as {
         mode: "user" | "server";
         guildId?: string;
@@ -303,26 +300,7 @@ export const discordRouter = j.router({
       })
     )
     .mutation(async ({ c, ctx, input }) => {
-      const { db, session } = ctx as {
-        db: {
-          users: {
-            findUnique: (args: {
-              where: { discordId: string };
-            }) => Promise<{ id: string } | null>;
-          };
-          servers: {
-            create: (args: {
-              data: {
-                id: string;
-                name: string;
-                ownerId: string;
-                updatesChannel: string;
-              };
-            }) => Promise<{ id: string } | null>;
-          };
-        };
-        session: { user: { id: string } };
-      };
+      const { db, session } = ctx;
       const { guildId, channelId } = input as {
         guildId: string;
         channelId: string;

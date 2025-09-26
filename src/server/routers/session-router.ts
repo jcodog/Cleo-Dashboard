@@ -4,14 +4,7 @@ import { RESTGetAPIUserResult } from "discord-api-types/v10";
 // Renamed from authRouter to sessionRouter to avoid collision with Better Auth's /api/auth endpoints
 export const sessionRouter = j.router({
   sync_user: authProcedure.query(async ({ c, ctx }) => {
-    const { db, session } = ctx as {
-      db: {
-        users: {
-          findFirst: (args: { where: { extId: string } }) => Promise<unknown>;
-        };
-      };
-      session: { user: { id: string } };
-    };
+    const { db, session } = ctx;
     const userId: string = session.user.id;
     try {
       const exists = await db.users.findFirst({ where: { extId: userId } });
