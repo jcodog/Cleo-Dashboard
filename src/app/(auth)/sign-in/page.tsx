@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import DiscordAuthButton from "@/components/auth/DiscordAuthButton";
+import { Badge } from "@/components/ui/badge";
 
 function SignInInner() {
   const { useSession, getLastUsedLoginMethod } = authClient;
@@ -70,7 +71,10 @@ function SignInInner() {
 
   return (
     <section className="flex flex-1 items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-5">
+      <div className="w-full max-w-sm rounded-xl border border-white/15 bg-white/10 p-6 shadow-lg backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 flex flex-col gap-5 relative overflow-hidden">
+        <div className="pointer-events-none absolute -inset-px rounded-[inherit] [mask-image:radial-gradient(70%_50%_at_10%_0%,black,transparent)]">
+          <div className="absolute inset-px rounded-[inherit] bg-gradient-to-br from-white/20 via-white/5 to-transparent" />
+        </div>
         <div className="space-y-1">
           <h1 className="text-xl font-semibold text-center">Sign in</h1>
           <p className="text-xs text-muted-foreground text-center">
@@ -82,12 +86,14 @@ function SignInInner() {
             Redirecting...
           </p>
         ) : (
-          <DiscordAuthButton
-            onClick={handleDiscord}
-            loading={loading}
-            disabled={isPending}
-            lastMethod={lastUsed ?? undefined}
-          />
+          <>
+            <DiscordAuthButton
+              onClick={handleDiscord}
+              loading={loading}
+              disabled={isPending}
+              lastUsed={lastUsed ?? undefined}
+            />
+          </>
         )}
         <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
           <span>Need an account?</span>
@@ -103,8 +109,21 @@ function SignInInner() {
           </Link>
         </div>
         <p className="text-[10px] leading-relaxed text-muted-foreground text-center">
-          By continuing you agree to our Terms and acknowledge our Privacy
-          Policy.
+          By continuing you agree to our{" "}
+          <Link
+            className="text-primary hover:underline"
+            href="/policies/terms-of-service"
+          >
+            Terms of Service
+          </Link>{" "}
+          and our{" "}
+          <Link
+            className="text-primary hover:underline"
+            href="/policies/privacy"
+          >
+            Privacy Policy
+          </Link>
+          .
         </p>
       </div>
     </section>

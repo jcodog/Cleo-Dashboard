@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@/prisma";
 
 /**
  * Ensures we always return a valid Discord access token for the Better Auth user.

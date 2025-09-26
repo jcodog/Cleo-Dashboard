@@ -65,7 +65,7 @@ const DashboardHomePage = () => {
           {/* Compact status on mobile */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="sm:hidden inline-flex items-center justify-center size-8 rounded-full border border-border/60 bg-background/60 cursor-pointer">
+              <div className="sm:hidden inline-flex items-center justify-center size-8 rounded-full border border-white/12 bg-white/5 backdrop-blur-sm cursor-pointer">
                 {isOauth2DataLoading ? (
                   <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
                 ) : isUserInstalled ? (
@@ -88,17 +88,17 @@ const DashboardHomePage = () => {
           {/* Full pill on larger screens */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="hidden sm:flex px-3 py-1.5 gap-2 items-center justify-center rounded-full bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.12),transparent)] border border-border/60 cursor-pointer">
-                <p className="text-pretty text-sm font-medium">
+              <div className="hidden sm:flex group relative h-11 px-3 gap-2 items-center justify-center rounded-full border border-white/12 bg-white/5 backdrop-blur-md cursor-pointer overflow-hidden before:content-[''] before:absolute before:inset-0 before:rounded-[inherit] before:pointer-events-none before:bg-[radial-gradient(120%_80%_at_10%_0%,rgba(255,255,255,0.35),transparent_60%)] before:opacity-35 after:content-[''] after:absolute after:inset-0 after:rounded-[inherit] after:pointer-events-none after:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.5),transparent)] after:translate-x-[-120%] group-hover:after:translate-x-[120%] after:transition-transform after:duration-700">
+                <p className="relative z-10 text-pretty text-sm font-medium">
                   User installed:
                 </p>
                 {isOauth2DataLoading ? (
-                  <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <Loader className="relative z-10 h-5 w-5 animate-spin text-muted-foreground" />
                 ) : isUserInstalled ? (
-                  <CircleCheck className="h-5 w-5 text-green-500" />
+                  <CircleCheck className="relative z-10 h-5 w-5 text-green-500" />
                 ) : (
                   <Link href="/add">
-                    <CircleX className="h-5 w-5 text-red-500" />
+                    <CircleX className="relative z-10 h-5 w-5 text-red-500" />
                   </Link>
                 )}
               </div>

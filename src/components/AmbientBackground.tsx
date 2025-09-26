@@ -36,14 +36,14 @@ export function AmbientBackground({
       />
 
       {/* Subtle grid lines with radial mask */}
-      <div className="absolute inset-0 opacity-15 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]">
+      <div className="absolute inset-0 opacity-[0.15] [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:48px_48px]" />
       </div>
 
       {/* Animated aurora blobs (spin + gentle float) */}
       <div
         className={cn(
-          "absolute rounded-full blur-3xl opacity-25 will-change-transform",
+          "absolute rounded-full blur-3xl opacity-25 will-change-[transform]",
           isLanding
             ? "-top-40 -left-32 h-[38rem] w-[38rem] bg-gradient-to-tr from-fuchsia-500/40 via-purple-400/40 to-indigo-400/40"
             : "-top-60 -right-40 h-[42rem] w-[42rem] bg-gradient-to-tr from-fuchsia-500/30 via-purple-400/30 to-indigo-400/30"
@@ -55,7 +55,7 @@ export function AmbientBackground({
       />
       <div
         className={cn(
-          "absolute rounded-full blur-3xl opacity-25 will-change-transform",
+          "absolute rounded-full blur-3xl opacity-25 will-change-[transform]",
           isLanding
             ? "-bottom-56 -right-44 h-[44rem] w-[44rem] bg-gradient-to-br from-cyan-400/40 via-sky-400/30 to-emerald-400/30"
             : "-bottom-40 -left-44 h-[46rem] w-[46rem] bg-gradient-to-br from-cyan-400/30 via-sky-400/25 to-emerald-400/25"

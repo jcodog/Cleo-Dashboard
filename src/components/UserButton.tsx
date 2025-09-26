@@ -8,8 +8,8 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/authClient";
-import { useCallback, useMemo } from "react";
-import { LogOut, User2 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { LogOut, User2, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,7 @@ export function UserButton({
   showName = true,
   size = 32,
 }: UserButtonProps) {
+  const [open, setOpen] = useState(false);
   const { useSession, signOut } = authClient;
   const { data: session, isPending } = useSession();
 
@@ -83,12 +84,16 @@ export function UserButton({
   const label = user?.name || user?.email || "Account";
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
           aria-label="User menu"
           className={cn(
-            "group inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-2.5 py-1.5 text-sm hover:bg-card/80 transition-colors cursor-pointer",
+            // Glassmorphism trigger: same height as the 'User installed' pill
+            "group inline-flex h-11 items-center gap-2 rounded-full border border-white/12 bg-white/5 backdrop-blur-md px-3 text-sm transition-all cursor-pointer relative overflow-hidden",
+            // specular highlight sweep + subtle inner glow
+            "before:content-[''] before:absolute before:inset-0 before:rounded-[inherit] before:pointer-events-none before:bg-[radial-gradient(120%_80%_at_10%_0%,rgba(255,255,255,0.35),transparent_60%)] before:opacity-35 after:content-[''] after:absolute after:inset-0 after:rounded-[inherit] after:pointer-events-none after:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.5),transparent)] after:translate-x-[-120%] group-hover:after:translate-x-[120%] after:transition-transform after:duration-700",
+            isPending && "animate-pulse",
             className
           )}
         >
@@ -103,6 +108,13 @@ export function UserButton({
               {label}
             </span>
           )}
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              open ? "rotate-180" : "rotate-0"
+            )}
+            aria-hidden="true"
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

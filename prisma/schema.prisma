@@ -65,6 +65,7 @@ model Users {
   discordId            String                @unique
   role                 Role                  @default(user)
   customerId           String?               @unique
+  timezone             String?
   premiumSubscriptions PremiumSubscriptions?
   plan                 Plans                 @default(FREE)
   limits               Limits?

@@ -1,11 +1,11 @@
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
+import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
+  "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow,background,opacity] overflow-hidden",
   {
     variants: {
       variant: {
@@ -17,13 +17,15 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        glass:
+          "border-white/12 bg-white/6 text-white backdrop-blur-sm dark:border-white/10 dark:bg-white/5 shadow-xs relative before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:rounded-[inherit] before:bg-[radial-gradient(120%_120%_at_10%_0%,rgba(255,255,255,0.35),transparent_60%)] before:opacity-35",
       },
     },
     defaultVariants: {
       variant: "default",
     },
   }
-)
+);
 
 function Badge({
   className,
@@ -32,7 +34,7 @@ function Badge({
   ...props
 }: React.ComponentProps<"span"> &
   VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot : "span"
+  const Comp = asChild ? Slot : "span";
 
   return (
     <Comp
@@ -40,7 +42,7 @@ function Badge({
       className={cn(badgeVariants({ variant }), className)}
       {...props}
     />
-  )
+  );
 }
 
-export { Badge, badgeVariants }
+export { Badge, badgeVariants };
