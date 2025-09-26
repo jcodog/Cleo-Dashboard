@@ -35,7 +35,7 @@ export const ServerCard = ({
         {isRecent && (
           <Badge
             variant="glass"
-            className="absolute top-2 left-2 z-20 px-2 py-0.5 text-xs font-semibold"
+            className="absolute top-2 left-2 z-20 px-2 py-0.5 text-xs font-semibold border-white/20 before:opacity-45 bg-black/35 dark:bg-black/40 backdrop-brightness-85 shadow-sm"
           >
             Recently viewed
           </Badge>
@@ -62,7 +62,7 @@ export const ServerCard = ({
         {isRecent && (
           <Badge
             variant="glass"
-            className="absolute top-2 left-2 z-20 px-2 py-0.5 text-xs font-semibold"
+            className="absolute top-2 left-2 z-20 px-2 py-0.5 text-xs font-semibold border-white/20 before:opacity-45 bg-black/35 dark:bg-black/40 backdrop-brightness-85 shadow-sm"
           >
             Recently viewed
           </Badge>

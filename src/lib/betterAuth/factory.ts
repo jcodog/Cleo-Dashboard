@@ -173,6 +173,15 @@ export const createAuth = (env: AuthEnv) => {
               return candidate;
             };
 
+            const display =
+              (authUser as any)?.username ??
+              authUser?.name ??
+              (authUser?.email
+                ? authUser.email.split("@")[0]
+                : `user_${account.userId.slice(0, 6)}`);
+
+            const username = await pickUniqueUsername(display);
+
             // 0) Already linked by extId? (app user exists and is attached to this BA user)
             const byExt = await prisma.users.findFirst({
               where: { extId: account.userId },
@@ -209,6 +218,7 @@ export const createAuth = (env: AuthEnv) => {
               await prisma.users.update({
                 where: { id: byDiscord.id },
                 data: {
+                  username,
                   extId: account.userId,
                   email: byDiscord.email ?? authUser?.email ?? null,
                   timezone: authUser?.locale ?? byDiscord.timezone ?? null,
@@ -247,6 +257,7 @@ export const createAuth = (env: AuthEnv) => {
                 await prisma.users.update({
                   where: { id: byEmail.id },
                   data: {
+                    username,
                     extId: account.userId,
                     discordId: account.accountId,
                     timezone: authUser?.locale ?? byEmail.timezone ?? null,
@@ -277,15 +288,6 @@ export const createAuth = (env: AuthEnv) => {
             }
 
             // 3) Nothing to claim — create a fresh app user
-            const display =
-              (authUser as any)?.username ??
-              authUser?.name ??
-              (authUser?.email
-                ? authUser.email.split("@")[0]
-                : `user_${account.userId.slice(0, 6)}`);
-
-            const username = await pickUniqueUsername(display);
-
             try {
               const created = await prisma.users.create({
                 data: {
@@ -331,6 +333,7 @@ export const createAuth = (env: AuthEnv) => {
                 await prisma.users.update({
                   where: { email: authUser.email },
                   data: {
+                    username,
                     extId: account.userId,
                     discordId: account.accountId,
                     timezone: (authUser as any)?.locale ?? null,
@@ -342,6 +345,7 @@ export const createAuth = (env: AuthEnv) => {
                 await prisma.users.update({
                   where: { discordId: account.accountId },
                   data: {
+                    username,
                     extId: account.userId,
                     email: authUser?.email ?? undefined,
                     timezone: authUser?.locale ?? null,

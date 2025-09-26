@@ -19,6 +19,9 @@ const badgeVariants = cva(
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         glass:
           "border-white/12 bg-white/6 text-white backdrop-blur-sm dark:border-white/10 dark:bg-white/5 shadow-xs relative before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:rounded-[inherit] before:bg-[radial-gradient(120%_120%_at_10%_0%,rgba(255,255,255,0.35),transparent_60%)] before:opacity-35",
+        // Higher-contrast glass variant for busy/image backgrounds
+        "glass-contrast":
+          "text-white border-white/20 bg-black/55 shadow-md backdrop-blur-md backdrop-saturate-150 backdrop-brightness-[.85] ring-1 ring-black/40 relative before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:rounded-[inherit] before:bg-[radial-gradient(120%_120%_at_10%_0%,rgba(255,255,255,0.25),transparent_60%)] before:opacity-40 dark:ring-black/50",
       },
     },
     defaultVariants: {
