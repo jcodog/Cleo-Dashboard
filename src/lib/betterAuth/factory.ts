@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/prisma";
+import { loadStripe } from "@/lib/stripe";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { loadStripe } from "@/lib/stripe";
 import { lastLoginMethod } from "better-auth/plugins";
 
 export type AuthEnv = {
@@ -100,22 +100,26 @@ export const createAuth = (env: AuthEnv) => {
           "guilds.join",
           "guilds.members.read",
         ],
-        mapProfile: (profile: {
-          id: string;
-          email?: string;
-          global_name?: string;
-          username?: string;
-          avatar?: string | null;
-        }) => ({
-          id: profile.id,
-          email: profile.email,
-          name: profile.global_name || profile.username,
-          image: profile.avatar
-            ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png?size=256`
-            : undefined,
-          username: profile.username,
-          raw: profile,
-        }),
+        mapProfileToUser: (profile) => {
+          return {
+            email: profile.email,
+            name: profile.global_name || profile.username,
+            image: profile.image_url
+              ? profile.image_url
+              : profile.avatar
+              ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png?size=256`
+              : undefined,
+            username: profile.username,
+            locale: profile.locale,
+            emailVerified: profile.verified,
+          };
+        },
+      },
+    },
+    user: {
+      additionalFields: {
+        username: { type: "string", unique: true },
+        locale: { type: "string" },
       },
     },
     baseURL: env.NEXT_PUBLIC_SITE_URL ?? "https://cleoai.cloud",
@@ -123,116 +127,231 @@ export const createAuth = (env: AuthEnv) => {
       domain: normalizedCookieDomain,
       sameSite: "lax",
     },
-    events: {
-      user: {
-        created: async ({
-          user,
-        }: {
-          user: {
-            id: string;
-            email?: string | null;
-            name?: string | null;
-            username?: string | null;
-          };
-        }) => {
-          try {
+    databaseHooks: {
+      account: {
+        create: {
+          /**
+           * Runs right after a provider account is created/linked for a Better Auth user.
+           * This is the safest place to "claim" or create your app-side Users row because
+           * the Discord link (providerId/accountId) is guaranteed to exist here.
+           *
+           * Flow:
+           * 0) If Users already has a row linked by extId, backfill Stripe if needed and exit.
+           * 1) Try claim by discordId (strongest signal).
+           * 2) Try claim by email (covers Clerk-era users).
+           * 3) Otherwise create a new Users row (with username collision handling).
+           *    - On P2002 (unique) races, convert to UPDATE by email/discordId.
+           *
+           * @param account The Better Auth Account row that was just created
+           * @param ctx     Hook context (not used here, but kept for parity)
+           */
+          after: async (account, ctx) => {
+            // Only care about Discord accounts for this logic
+            if (account.providerId !== "discord") return;
+
             const prisma = db;
-            const existing = await prisma.users.findFirst({
-              where: { extId: user.id },
+
+            // Pull the Better Auth User so we can read email/name/locale
+            const authUser = await prisma.user.findUnique({
+              where: { id: account.userId },
             });
-            if (existing) {
-              // Ensure Stripe customer exists if we now have a key configured
-              if (stripe && !existing.customerId) {
+
+            // Helper: generate a collision-safe username
+            const pickUniqueUsername = async (base: string) => {
+              const safe = base
+                .toLowerCase()
+                .replace(/[^a-z0-9_]/g, "_")
+                .slice(0, 30);
+              let candidate = safe;
+              for (let i = 0; i < 5; i++) {
+                const hit = await prisma.users
+                  .findUnique({ where: { username: candidate } })
+                  .catch(() => null);
+                if (!hit) return candidate;
+                candidate = `${safe}_${Math.random().toString(36).slice(2, 6)}`;
+              }
+              return candidate;
+            };
+
+            // 0) Already linked by extId? (app user exists and is attached to this BA user)
+            const byExt = await prisma.users.findFirst({
+              where: { extId: account.userId },
+            });
+            if (byExt) {
+              // Stripe backfill (same logic you had)
+              if (stripe && !byExt.customerId) {
                 try {
                   const customer = await stripe.customers.create({
-                    email: existing.email || undefined,
-                    name: existing.username || undefined,
-                    metadata: { extId: existing.extId || "" },
+                    email: byExt.email || undefined,
+                    name: byExt.username || undefined,
+                    metadata: { extId: byExt.extId || "" },
                   });
                   await prisma.users.update({
-                    where: { id: existing.id },
+                    where: { id: byExt.id },
                     data: { customerId: customer.id },
                   });
                 } catch (e) {
                   console.error(
-                    "[better-auth:user.created] stripe backfill failed",
+                    "[better-auth:account.created] stripe backfill failed",
                     e
                   );
                 }
               }
               return;
             }
-            const discordAccount = await prisma.account.findFirst({
-              where: { userId: user.id, providerId: "discord" },
-            });
-            if (discordAccount?.accountId) {
-              const claimant = await prisma.users
-                .findUnique({ where: { discordId: discordAccount.accountId } })
+
+            // 1) Claim by discordId (now guaranteed to exist on the Account)
+            const byDiscord = await prisma.users
+              .findUnique({ where: { discordId: account.accountId } })
+              .catch(() => null);
+
+            if (byDiscord && byDiscord.extId !== account.userId) {
+              await prisma.users.update({
+                where: { id: byDiscord.id },
+                data: {
+                  extId: account.userId,
+                  email: byDiscord.email ?? authUser?.email ?? null,
+                  timezone: authUser?.locale ?? byDiscord.timezone ?? null,
+                },
+              });
+
+              // Stripe backfill on claim
+              if (stripe && !byDiscord.customerId) {
+                try {
+                  const customer = await stripe.customers.create({
+                    email: byDiscord.email || authUser?.email || undefined,
+                    name: byDiscord.username || undefined,
+                    metadata: { extId: account.userId || "" },
+                  });
+                  await prisma.users.update({
+                    where: { id: byDiscord.id },
+                    data: { customerId: customer.id },
+                  });
+                } catch (e) {
+                  console.error(
+                    "[better-auth:account.created] stripe backfill failed",
+                    e
+                  );
+                }
+              }
+              return;
+            }
+
+            // 2) Claim by email (covers existing Clerk users)
+            if (authUser?.email) {
+              const byEmail = await prisma.users
+                .findUnique({ where: { email: authUser.email } })
                 .catch(() => null);
-              if (claimant && claimant.extId !== user.id) {
+
+              if (byEmail && byEmail.extId !== account.userId) {
                 await prisma.users.update({
-                  where: { discordId: discordAccount.accountId },
-                  data: { extId: user.id, email: claimant.email || user.email },
+                  where: { id: byEmail.id },
+                  data: {
+                    extId: account.userId,
+                    discordId: account.accountId,
+                    timezone: authUser?.locale ?? byEmail.timezone ?? null,
+                  },
                 });
+
+                // Stripe backfill on claim
+                if (stripe && !byEmail.customerId) {
+                  try {
+                    const customer = await stripe.customers.create({
+                      email: byEmail.email || undefined,
+                      name: byEmail.username || undefined,
+                      metadata: { extId: account.userId || "" },
+                    });
+                    await prisma.users.update({
+                      where: { id: byEmail.id },
+                      data: { customerId: customer.id },
+                    });
+                  } catch (e) {
+                    console.error(
+                      "[better-auth:account.created] stripe backfill failed",
+                      e
+                    );
+                  }
+                }
                 return;
               }
             }
-            const baseUsername =
-              user.username ||
-              user.name ||
-              (user.email
-                ? user.email.split("@")[0]
-                : `user_${user.id.slice(0, 6)}`);
-            let username = baseUsername;
-            let collision = await prisma.users
-              .findUnique({ where: { username } })
-              .catch(() => null);
-            let attempt = 0;
-            while (collision && attempt < 5) {
-              username = `${baseUsername}_${Math.random()
-                .toString(36)
-                .slice(2, 6)}`;
-              collision = await prisma.users
-                .findUnique({ where: { username } })
-                .catch(() => null);
-              attempt++;
-            }
-            const created = await prisma.users.create({
-              data: {
-                extId: user.id,
-                username: username as string,
-                email: user.email,
-                discordId: discordAccount?.accountId || `pending-${user.id}`,
-                limits: { create: { date: new Date() } },
-              },
-            });
 
-            // Create & attach Stripe customer (idempotent-ish)
-            if (stripe) {
-              try {
-                const customer = await stripe.customers.create({
-                  email: created.email || undefined,
-                  name: created.username || undefined,
-                  metadata: { extId: created.extId || created.id },
-                });
-                await prisma.users.update({
-                  where: { id: created.id },
-                  data: { customerId: customer.id },
-                });
-              } catch (e) {
-                console.error(
-                  "[better-auth:user.created] stripe customer create failed",
-                  e
+            // 3) Nothing to claim — create a fresh app user
+            const display =
+              (authUser as any)?.username ??
+              authUser?.name ??
+              (authUser?.email
+                ? authUser.email.split("@")[0]
+                : `user_${account.userId.slice(0, 6)}`);
+
+            const username = await pickUniqueUsername(display);
+
+            try {
+              const created = await prisma.users.create({
+                data: {
+                  extId: account.userId,
+                  email: authUser?.email ?? null,
+                  username,
+                  discordId: account.accountId,
+                  timezone: authUser?.locale ?? null,
+                  limits: { create: { date: new Date() } },
+                },
+              });
+
+              // Stripe create & attach
+              if (stripe) {
+                try {
+                  const customer = await stripe.customers.create({
+                    email: created.email || undefined,
+                    name: created.username || undefined,
+                    metadata: { extId: created.extId || created.id },
+                  });
+                  await prisma.users.update({
+                    where: { id: created.id },
+                    data: { customerId: customer.id },
+                  });
+                } catch (e) {
+                  console.error(
+                    "[better-auth:account.created] stripe customer create failed",
+                    e
+                  );
+                }
+              } else {
+                console.warn(
+                  "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
                 );
               }
-            } else {
-              console.warn(
-                "[better-auth:user.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
-              );
+            } catch (e: any) {
+              // Convert unique collisions into claims (handles races / parallel requests)
+              if (
+                e.code === "P2002" &&
+                e.meta?.target?.includes("email") &&
+                authUser?.email
+              ) {
+                await prisma.users.update({
+                  where: { email: authUser.email },
+                  data: {
+                    extId: account.userId,
+                    discordId: account.accountId,
+                    timezone: (authUser as any)?.locale ?? null,
+                  },
+                });
+                return;
+              }
+              if (e.code === "P2002" && e.meta?.target?.includes("discordId")) {
+                await prisma.users.update({
+                  where: { discordId: account.accountId },
+                  data: {
+                    extId: account.userId,
+                    email: authUser?.email ?? undefined,
+                    timezone: authUser?.locale ?? null,
+                  },
+                });
+                return;
+              }
+              throw e;
             }
-          } catch (err: unknown) {
-            console.error("[better-auth:user.created] provisioning error", err);
-          }
+          },
         },
       },
     },

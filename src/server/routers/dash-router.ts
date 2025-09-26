@@ -677,6 +677,7 @@ export const dashRouter = j.router({
         name: session.user.name,
         username: user.username,
         plan: user.plan,
+        timezone: user.timezone,
       },
     });
   }),
@@ -747,4 +748,68 @@ export const dashRouter = j.router({
         return c.json({ success: false, error: message });
       }
     }),
+
+  /**
+   * Permanently deletes the current user's account.
+   * Steps:
+   *  - Cancel any active Stripe subscriptions and delete the Stripe customer (best-effort)
+   *  - Delete domain user (Users) – cascades Limits and PremiumSubscriptions
+   *  - Delete Better Auth user (user) – cascades sessions and accounts
+   */
+  deleteAccount: dashProcedure.mutation(async ({ c, ctx }) => {
+    const { db, stripe, session, user } = ctx;
+    try {
+      // Best-effort Stripe cleanup
+      if (user.customerId && stripe) {
+        try {
+          const subs = await stripe.subscriptions.list({
+            customer: user.customerId,
+            status: "active",
+            limit: 100,
+          });
+          for (const s of subs.data) {
+            try {
+              await stripe.subscriptions.cancel(s.id);
+            } catch (e) {
+              console.error(
+                "[deleteAccount] stripe subscription cancel failed",
+                e
+              );
+            }
+          }
+          try {
+            await stripe.customers.del(user.customerId);
+          } catch (e) {
+            console.error("[deleteAccount] stripe customer deletion failed", e);
+          }
+        } catch (e) {
+          console.error("[deleteAccount] stripe cleanup failed", e);
+        }
+      }
+
+      // Delete domain user (cascades via Prisma relations where defined)
+      try {
+        await db.users.delete({ where: { id: user.id } });
+      } catch (e) {
+        console.error("[deleteAccount] domain user delete failed", e);
+        // continue to attempt auth user deletion regardless
+      }
+
+      // Delete Better Auth user (cascades sessions/accounts)
+      try {
+        await db.user.delete({ where: { id: session.user.id } });
+      } catch (e) {
+        console.error("[deleteAccount] auth user delete failed", e);
+      }
+
+      return c.json({ success: true });
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" && err && "message" in err
+          ? String((err as { message?: unknown }).message)
+          : "Failed to delete account";
+      console.error("deleteAccount error", err);
+      return c.json({ success: false, error: message });
+    }
+  }),
 });

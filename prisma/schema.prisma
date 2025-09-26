@@ -199,7 +199,11 @@ model User {
 
   lastLoginMethod String?
 
+  username String?
+  locale   String?
+
   @@unique([email])
+  @@unique([username])
   @@map("user")
 }
 

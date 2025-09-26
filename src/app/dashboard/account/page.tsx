@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AiUsage } from "@/components/AccountTabs/AiUsage";
-import { LogOut, RefreshCw, ArrowLeft } from "lucide-react";
+import { LogOut, RefreshCw, ArrowLeft, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { client } from "@/lib/client";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ export default function DashboardAccountPage() {
   const { useSession } = authClient;
   const { data: session, isPending, error, refetch } = useSession();
   const [signingOut, setSigningOut] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   // removed copy functionality (no longer needed)
   const isLoading = isPending;
 
@@ -344,6 +345,44 @@ export default function DashboardAccountPage() {
                 )}
               >
                 <RefreshCw className="h-4 w-4" /> Refresh Session
+              </button>
+              <button
+                onClick={async () => {
+                  if (deleting) return;
+                  const confirmed = window.confirm(
+                    "This will permanently delete your account. This cannot be undone. Continue?"
+                  );
+                  if (!confirmed) return;
+                  setDeleting(true);
+                  try {
+                    const res = await client.dash.deleteAccount.$post();
+                    const json = await res.json();
+                    if (json.success) {
+                      toast.success("Your account has been deleted");
+                      try {
+                        await authClient.signOut();
+                      } catch {}
+                      window.location.href = "/";
+                    } else {
+                      toast.error(json.error || "Failed to delete account");
+                    }
+                  } catch (e: unknown) {
+                    const message =
+                      typeof e === "object" && e && "message" in e
+                        ? String((e as { message?: unknown }).message)
+                        : "Failed to delete account";
+                    toast.error(message);
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+                className={btn(
+                  "border-red-600/50 bg-red-600 text-white hover:bg-red-600/90 disabled:opacity-60"
+                )}
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? "Deleting..." : "Delete account"}
               </button>
             </div>
 
