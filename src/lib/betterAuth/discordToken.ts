@@ -1,4 +1,4 @@
-import { PrismaClient } from "@/prisma";
+import { DbClient } from "@/lib/prisma";
 
 /**
  * Ensures we always return a valid Discord access token for the Better Auth user.
@@ -10,15 +10,18 @@ import { PrismaClient } from "@/prisma";
  * 5. If refresh fails, throw so caller can prompt re-link.
  */
 export async function getDiscordAccessToken(opts: {
-  db: PrismaClient;
+  db: DbClient;
   userId: string; // Better Auth user.id (NOT your Users.id)
   clientId: string;
   clientSecret: string;
 }): Promise<string> {
   const { db, userId, clientId, clientSecret } = opts;
 
-  const account = await (db as PrismaClient).account.findFirst({
+  const account = await db.account.findFirst({
     where: { userId, providerId: "discord" },
+    cacheStrategy: {
+      ttl: 60,
+    },
   });
 
   if (!account || !account.accessToken) {
@@ -94,7 +97,7 @@ export async function getDiscordAccessToken(opts: {
   const expiresInMs = (json.expires_in ?? 3600) * 1000;
   const newExpiry = new Date(Date.now() + expiresInMs);
 
-  await (db as PrismaClient).account.update({
+  await db.account.update({
     where: { id: account.id },
     data: {
       accessToken: newAccessToken,

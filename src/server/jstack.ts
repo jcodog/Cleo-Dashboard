@@ -6,7 +6,6 @@ import { RESTGetAPIUserResult } from "discord-api-types/v10";
 import { loadStripe } from "@/lib/stripe";
 import { getWorkerAuth } from "@/lib/betterAuth/workers";
 import { getDiscordAccessToken } from "@/lib/betterAuth/discordToken";
-import { secureHeaders } from "hono/secure-headers";
 
 export interface Env {
   Bindings: {
@@ -78,6 +77,9 @@ const botMiddleware = j.middleware(async ({ c, ctx, next }) => {
   let user = await db.users.findUnique({
     where: { discordId },
     include: { limits: true, premiumSubscriptions: true },
+    cacheStrategy: {
+      ttl: 60,
+    },
   });
 
   if (!user) {
@@ -130,6 +132,9 @@ const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
     try {
       const discordAccount = await db.account.findFirst({
         where: { userId: authUserId, providerId: "discord" },
+        cacheStrategy: {
+          ttl: 60,
+        },
       });
       if (discordAccount?.accountId) {
         // Attempt claim: existing user with same discordId from pre-migration
@@ -187,6 +192,9 @@ const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
     // Fallback to legacy accessToken field if helper failed (e.g. missing refresh token yet)
     const discordAccount = await db.account.findFirst({
       where: { userId: authUserId, providerId: "discord" },
+      cacheStrategy: {
+        ttl: 60,
+      },
     });
     if (!discordAccount?.accessToken) {
       console.error("[dashMiddleware] missing discord linkage", {
@@ -243,6 +251,9 @@ const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
       // Only throw if still mismatched after attempted sync (avoid noisy failures on concurrency)
       const refreshed = await db.users.findUnique({
         where: { id: appUser.id },
+        cacheStrategy: {
+          ttl: 60,
+        },
       });
       if (!refreshed || refreshed.discordId !== discordId) {
         console.error("[dashMiddleware] discord id sync error", err);

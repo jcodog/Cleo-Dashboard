@@ -5,7 +5,6 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import DiscordAuthButton from "@/components/auth/DiscordAuthButton";
-import { Badge } from "@/components/ui/badge";
 
 function SignInInner() {
   const { useSession, getLastUsedLoginMethod } = authClient;

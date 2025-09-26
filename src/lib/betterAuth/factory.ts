@@ -4,16 +4,6 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { loadStripe } from "@/lib/stripe";
 import { lastLoginMethod } from "better-auth/plugins";
 
-function safeHostname(url?: string) {
-  if (!url) return undefined;
-  try {
-    const { hostname } = new URL(url);
-    return hostname;
-  } catch {
-    return undefined;
-  }
-}
-
 export type AuthEnv = {
   DATABASE_URL: string;
   BETTER_AUTH_SECRET: string;
