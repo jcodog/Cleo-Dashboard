@@ -174,13 +174,13 @@ export const createAuth = (env: AuthEnv) => {
             };
 
             const display =
-              (authUser as any)?.username ??
+              authUser?.username ??
               authUser?.name ??
               (authUser?.email
                 ? authUser.email.split("@")[0]
                 : `user_${account.userId.slice(0, 6)}`);
 
-            const username = await pickUniqueUsername(display);
+            const username = await pickUniqueUsername(display as string);
 
             // 0) Already linked by extId? (app user exists and is attached to this BA user)
             const byExt = await prisma.users.findFirst({
@@ -323,6 +323,10 @@ export const createAuth = (env: AuthEnv) => {
                   "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
                 );
               }
+
+              // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
+              // We intentionally suppress the lint rules for this line only.
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (e: any) {
               // Convert unique collisions into claims (handles races / parallel requests)
               if (
@@ -336,7 +340,7 @@ export const createAuth = (env: AuthEnv) => {
                     username,
                     extId: account.userId,
                     discordId: account.accountId,
-                    timezone: (authUser as any)?.locale ?? null,
+                    timezone: authUser?.locale ?? null,
                   },
                 });
                 return;
