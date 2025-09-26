@@ -145,7 +145,7 @@ export const createAuth = (env: AuthEnv) => {
            * @param account The Better Auth Account row that was just created
            * @param ctx     Hook context (not used here, but kept for parity)
            */
-          after: async (account, ctx) => {
+          after: async (account) => {
             // Only care about Discord accounts for this logic
             if (account.providerId !== "discord") return;
 
