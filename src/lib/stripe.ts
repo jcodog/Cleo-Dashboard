@@ -11,7 +11,7 @@ export const loadStripe = ({ secretKey }: { secretKey: string }) => {
   }
   if (!globalThis.stripeClients[secretKey]) {
     globalThis.stripeClients[secretKey] = new Stripe(secretKey, {
-      apiVersion: "2025-08-27.basil",
+      apiVersion: "2025-09-30.clover",
       typescript: true,
     });
   }
