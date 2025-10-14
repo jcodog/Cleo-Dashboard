@@ -2,7 +2,7 @@ import { getDb } from "@/lib/prisma";
 import { loadStripe } from "@/lib/stripe";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { lastLoginMethod } from "better-auth/plugins";
+// import { lastLoginMethod } from "better-auth/plugins";
 
 /**
  * Environment configuration used to initialize Better Auth and related services.
@@ -141,7 +141,6 @@ export const createAuth = (env: AuthEnv) => {
           "email",
           "guilds",
           "connections",
-          "guilds.join",
           "guilds.members.read",
         ],
         /**
@@ -511,11 +510,11 @@ export const createAuth = (env: AuthEnv) => {
       "http://localhost:8080",
     ],
     plugins: [
-      lastLoginMethod({
-        cookieName: "better-auth.last_used_login_method",
-        maxAge: 60 * 60 * 24 * 90,
-        storeInDatabase: true,
-      }),
+      // lastLoginMethod({
+      //   cookieName: "better-auth.last_used_login_method",
+      //   maxAge: 60 * 60 * 24 * 90,
+      //   storeInDatabase: true,
+      // }),
     ],
     account: {
       accountLinking: {

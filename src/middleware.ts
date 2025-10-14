@@ -3,6 +3,44 @@ import { getCookieCache } from "better-auth/cookies";
 import { auth } from "@/lib/auth"; // server auth instance
 import { getDb } from "@/lib/prisma";
 
+// Known crawler/AI user agents we want to block broadly
+const BLOCKED_BOT_UAS = [
+  // Major search/social crawlers
+  "googlebot",
+  "bingbot",
+  "slurp",
+  "duckduckbot",
+  "baiduspider",
+  "yandex",
+  "sogou",
+  "exabot",
+  "ia_archiver",
+  "facebot",
+  "facebookexternalhit",
+  "twitterbot",
+  "applebot",
+  "redditbot",
+  "linkedinbot",
+  "pinterestbot",
+  // AI/LLM and scrapers
+  "gptbot",
+  "chatgpt-user",
+  "google-extended",
+  "ccbot",
+  "perplexitybot",
+  "anthropic-ai",
+  "claudebot",
+  "claude-web",
+  "oai-searchbot",
+  "bytespider",
+  "cohere-ai",
+  "mazekai",
+  "diffbot",
+  "dataforseo",
+  "serpapi",
+  "scrapy",
+];
+
 // Public (no auth required) paths similar to previous Clerk config
 const PUBLIC_PATHS: RegExp[] = [
   /^\/$/,
@@ -22,6 +60,17 @@ function matches(pathname: string, patterns: RegExp[]) {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Block bots from all areas except root and policies
+  const ua = (req.headers.get("user-agent") || "").toLowerCase();
+  const isBlockedBot = BLOCKED_BOT_UAS.some((sig) => ua.includes(sig));
+  const isAllowedForBots = pathname === "/" || pathname.startsWith("/policies");
+  if (isBlockedBot && !isAllowedForBots) {
+    return new NextResponse("Forbidden", {
+      status: 403,
+      headers: { "X-Robots-Tag": "noindex, nofollow, noarchive" },
+    });
+  }
 
   // Skip public routes early (but also avoid re-appending redirect repeatedly)
   if (matches(pathname, PUBLIC_PATHS)) {

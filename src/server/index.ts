@@ -16,6 +16,48 @@ import { healthRouter } from "@/server/routers/health-router";
 const api = j
   .router()
   .basePath("/api")
+  // Block known bots and crawlers at the edge of the API to reduce probing
+  .use(async (c, next) => {
+    const ua = (c.req.header("user-agent") || "").toLowerCase();
+    const blocked = [
+      "googlebot",
+      "bingbot",
+      "slurp",
+      "duckduckbot",
+      "baiduspider",
+      "yandex",
+      "sogou",
+      "exabot",
+      "ia_archiver",
+      "facebot",
+      "facebookexternalhit",
+      "twitterbot",
+      "applebot",
+      "redditbot",
+      "linkedinbot",
+      "pinterestbot",
+      "gptbot",
+      "chatgpt-user",
+      "google-extended",
+      "ccbot",
+      "perplexitybot",
+      "anthropic-ai",
+      "claudebot",
+      "claude-web",
+      "oai-searchbot",
+      "bytespider",
+      "cohere-ai",
+      "mazekai",
+      "diffbot",
+      "dataforseo",
+      "serpapi",
+      "scrapy",
+    ];
+    if (blocked.some((sig) => ua.includes(sig))) {
+      return c.text("Forbidden", 403);
+    }
+    return next();
+  })
   .use(
     cors({
       origin: (origin) => origin ?? "https://cleoai.cloud",

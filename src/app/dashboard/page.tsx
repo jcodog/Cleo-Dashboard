@@ -59,7 +59,7 @@ const DashboardHomePage = () => {
 
   return (
     <section className="container mx-auto p-6 flex flex-1 min-h-0 flex-col items-center gap-8">
-      <header className="w-full max-w-6xl shrink-0 flex items-center justify-between mb-4 rounded-xl border border-border/60 bg-card/70 backdrop-blur px-3 py-2 sm:px-4 sm:py-3">
+      <header className="w-full max-w-7xl shrink-0 flex items-center justify-between mb-4 rounded-xl border border-border/60 bg-card/70 backdrop-blur px-3 py-2 sm:px-4 sm:py-3">
         <Heading className="text-2xl sm:text-3xl">Dashboard</Heading>
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Compact status on mobile */}
@@ -115,7 +115,7 @@ const DashboardHomePage = () => {
         </div>
       </header>
 
-      <section className="w-full max-w-6xl flex flex-1 min-h-0 flex-col gap-4">
+      <section className="w-full max-w-7xl flex flex-1 min-h-0 flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl sm:text-2xl font-bold">Your Servers</h2>
           <Button variant="gradient" onClick={() => router.push("/add/server")}>
