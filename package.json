@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "postinstall": "prisma db push --skip-generate --accept-data-loss && prisma generate --accelerate && tsx ./build-scripts/seed-stripe.ts",
+    "postinstall": "prisma db push --skip-generate && prisma generate --accelerate && tsx ./build-scripts/seed-stripe.ts",
     "seed-stripe": "tsx ./build-scripts/seed-stripe.ts",
     "start:dev": "mprocs"
   },

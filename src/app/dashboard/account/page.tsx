@@ -12,11 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const btn = (base: string, extra?: string) =>
-  `inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${base} ${
-    extra || ""
-  }`;
+// Buttons now use shadcn <Button>; styles preserved via className overrides per button
 
 export default function DashboardAccountPage() {
   const router = useRouter();
@@ -144,7 +142,7 @@ export default function DashboardAccountPage() {
           <div className="flex items-center gap-2">
             <Button
               type="button"
-              variant="ghost"
+              variant="glass"
               size="icon"
               className="h-8 w-8"
               aria-label="Go back"
@@ -170,7 +168,7 @@ export default function DashboardAccountPage() {
             <div className="ml-auto">
               <Button
                 type="button"
-                variant="outline"
+                variant="glass"
                 size="sm"
                 onClick={() => router.push("/dashboard")}
               >
@@ -183,238 +181,250 @@ export default function DashboardAccountPage() {
           </p>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2 rounded-lg border bg-card p-5 shadow-sm flex flex-col gap-5">
-            <div className="flex items-center gap-5">
-              {profileLoading && !profile ? (
-                profileSectionSkeleton
-              ) : profileError ? (
-                <div className="text-xs text-destructive">
-                  Failed to load profile
-                </div>
-              ) : (
-                <>
-                  <Avatar className="h-16 w-16 border border-border/60">
-                    {user?.image && (
-                      <AvatarImage
-                        src={user.image}
-                        alt={user?.name || "Avatar"}
-                      />
-                    )}
-                    <AvatarFallback className="text-lg font-semibold">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <div className="flex gap-2">
-                      <span className="flex font-medium text-xl truncate">
-                        {name ||
-                          user?.name ||
-                          user?.email ||
-                          profile?.username ||
-                          "—"}
-                      </span>
-                      <span className="flex items-end font-medium text-xs text-muted-foreground truncate">
-                        {profile?.username || "—"}
-                      </span>
-                    </div>
-
-                    {profile?.email && (
-                      <span className="text-xs text-muted-foreground truncate mt-2">
-                        {profile.email}
-                      </span>
-                    )}
+        <ScrollArea className="h-full w-full overflow-x-hidden">
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-2 rounded-lg border bg-card p-5 shadow-sm flex flex-col gap-5">
+              <div className="flex items-center gap-5">
+                {profileLoading && !profile ? (
+                  profileSectionSkeleton
+                ) : profileError ? (
+                  <div className="text-xs text-destructive">
+                    Failed to load profile
                   </div>
-                </>
-              )}
+                ) : (
+                  <>
+                    <Avatar className="h-16 w-16 border border-border/60">
+                      {user?.image && (
+                        <AvatarImage
+                          src={user.image}
+                          alt={user?.name || "Avatar"}
+                        />
+                      )}
+                      <AvatarFallback className="text-lg font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <div className="flex gap-2">
+                        <span className="flex font-medium text-xl truncate">
+                          {name ||
+                            user?.name ||
+                            user?.email ||
+                            profile?.username ||
+                            "—"}
+                        </span>
+                        <span className="flex items-end font-medium text-xs text-muted-foreground truncate">
+                          {profile?.username || "—"}
+                        </span>
+                      </div>
+
+                      {profile?.email && (
+                        <span className="text-xs text-muted-foreground truncate mt-2">
+                          {profile.email}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <Separator />
+              <div className="space-y-4">
+                <h2 className="text-sm font-medium tracking-wide uppercase text-muted-foreground">
+                  Profile
+                </h2>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!initial) return;
+                    const changed: { name?: string; email?: string } = {};
+                    if (name.trim() && name.trim() !== initial.name)
+                      changed.name = name.trim();
+                    if (email.trim() && email.trim() !== initial.email)
+                      changed.email = email.trim();
+                    if (!changed.name && !changed.email) {
+                      toast.info("No changes to save");
+                      return;
+                    }
+                    setSaving(true);
+                    try {
+                      const res = await client.dash.updateProfile.$post(
+                        changed
+                      );
+                      const json = await res.json();
+                      if (json.success) {
+                        toast.success("Profile updated");
+                        setInitial({
+                          name: json.profile.name,
+                          email: json.profile.email,
+                        });
+                        // Optimistically update cached profile
+                        queryClient.setQueryData(["profile"], json.profile);
+                        // Refetch session so navigation/user button reflects changes
+                        refetch();
+                      } else {
+                        toast.error(json.error || "Failed to update");
+                      }
+                    } catch (err: unknown) {
+                      const message =
+                        typeof err === "object" && err && "message" in err
+                          ? String((err as { message?: unknown }).message)
+                          : "Update failed";
+                      toast.error(message);
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  className="space-y-3"
+                >
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Display Name
+                    </label>
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name"
+                      maxLength={80}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Shown in dashboard instead of Discord username.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Email
+                    </label>
+                    <Input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      maxLength={120}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Used for receipts & billing notices.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="glass"
+                      type="submit"
+                      disabled={saving}
+                    >
+                      {saving ? "Saving..." : "Save Changes"}
+                    </Button>
+                    {initial &&
+                      (name !== initial.name || email !== initial.email) && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="glass"
+                          onClick={() => {
+                            setName(initial.name);
+                            setEmail(initial.email);
+                          }}
+                        >
+                          Reset
+                        </Button>
+                      )}
+                  </div>
+                </form>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  variant="glass-destructive"
+                  size="sm"
+                  className="text-xs"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {signingOut ? "Signing out..." : "Sign out"}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => refetch()}
+                  variant="glass"
+                  size="sm"
+                  className="text-xs"
+                >
+                  <RefreshCw className="h-4 w-4" /> Refresh Session
+                </Button>
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    if (deleting) return;
+                    const confirmed = window.confirm(
+                      "This will permanently delete your account. This cannot be undone. Continue?"
+                    );
+                    if (!confirmed) return;
+                    setDeleting(true);
+                    try {
+                      const res = await client.dash.deleteAccount.$post();
+                      const json = await res.json();
+                      if (json.success) {
+                        toast.success("Your account has been deleted");
+                        try {
+                          await authClient.signOut();
+                        } catch {}
+                        window.location.href = "/";
+                      } else {
+                        toast.error(json.error || "Failed to delete account");
+                      }
+                    } catch (e: unknown) {
+                      const message =
+                        typeof e === "object" && e && "message" in e
+                          ? String((e as { message?: unknown }).message)
+                          : "Failed to delete account";
+                      toast.error(message);
+                    } finally {
+                      setDeleting(false);
+                    }
+                  }}
+                  disabled={deleting}
+                  variant="glass-destructive"
+                  size="sm"
+                  className="text-xs"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deleting ? "Deleting..." : "Delete account"}
+                </Button>
+              </div>
+
+              <div className="rounded-md border bg-muted/30 p-4 text-xs leading-relaxed space-y-2">
+                <div className="font-medium text-muted-foreground uppercase tracking-wide text-[10px]">
+                  Session
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <span className="text-muted-foreground">Session ID</span>
+                  <span className="font-mono text-[11px] break-all">
+                    {session.session.id}
+                  </span>
+                  <span className="text-muted-foreground">Discord ID</span>
+                  <span className="font-mono text-[11px] break-all">
+                    {profile?.discordId || "—"}
+                  </span>
+                  <span className="text-muted-foreground">Expires</span>
+                  <span className="font-mono text-[11px]">
+                    {new Date(session.session.expiresAt).toLocaleString()}
+                  </span>
+                  <span className="text-muted-foreground">Issued</span>
+                  <span className="font-mono text-[11px]">
+                    {new Date(session.session.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <Separator />
             <div className="space-y-4">
-              <h2 className="text-sm font-medium tracking-wide uppercase text-muted-foreground">
-                Profile
-              </h2>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!initial) return;
-                  const changed: { name?: string; email?: string } = {};
-                  if (name.trim() && name.trim() !== initial.name)
-                    changed.name = name.trim();
-                  if (email.trim() && email.trim() !== initial.email)
-                    changed.email = email.trim();
-                  if (!changed.name && !changed.email) {
-                    toast.info("No changes to save");
-                    return;
-                  }
-                  setSaving(true);
-                  try {
-                    const res = await client.dash.updateProfile.$post(changed);
-                    const json = await res.json();
-                    if (json.success) {
-                      toast.success("Profile updated");
-                      setInitial({
-                        name: json.profile.name,
-                        email: json.profile.email,
-                      });
-                      // Optimistically update cached profile
-                      queryClient.setQueryData(["profile"], json.profile);
-                      // Refetch session so navigation/user button reflects changes
-                      refetch();
-                    } else {
-                      toast.error(json.error || "Failed to update");
-                    }
-                  } catch (err: unknown) {
-                    const message =
-                      typeof err === "object" && err && "message" in err
-                        ? String((err as { message?: unknown }).message)
-                        : "Update failed";
-                    toast.error(message);
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-                className="space-y-3"
-              >
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Display Name
-                  </label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
-                    maxLength={80}
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Shown in dashboard instead of Discord username.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Email
-                  </label>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    maxLength={120}
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Used for receipts & billing notices.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <Button size="sm" type="submit" disabled={saving}>
-                    {saving ? "Saving..." : "Save Changes"}
-                  </Button>
-                  {initial &&
-                    (name !== initial.name || email !== initial.email) && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setName(initial.name);
-                          setEmail(initial.email);
-                        }}
-                      >
-                        Reset
-                      </Button>
-                    )}
-                </div>
-              </form>
-            </div>
-
-            <div className="flex flex-wrap gap-3 pt-2">
-              <button
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className={btn(
-                  "border-destructive/50 bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-60"
-                )}
-              >
-                <LogOut className="h-4 w-4" />
-                {signingOut ? "Signing out..." : "Sign out"}
-              </button>
-              <button
-                onClick={() => refetch()}
-                className={btn(
-                  "border-border/60 bg-background hover:bg-accent/50 text-muted-foreground"
-                )}
-              >
-                <RefreshCw className="h-4 w-4" /> Refresh Session
-              </button>
-              <button
-                onClick={async () => {
-                  if (deleting) return;
-                  const confirmed = window.confirm(
-                    "This will permanently delete your account. This cannot be undone. Continue?"
-                  );
-                  if (!confirmed) return;
-                  setDeleting(true);
-                  try {
-                    const res = await client.dash.deleteAccount.$post();
-                    const json = await res.json();
-                    if (json.success) {
-                      toast.success("Your account has been deleted");
-                      try {
-                        await authClient.signOut();
-                      } catch {}
-                      window.location.href = "/";
-                    } else {
-                      toast.error(json.error || "Failed to delete account");
-                    }
-                  } catch (e: unknown) {
-                    const message =
-                      typeof e === "object" && e && "message" in e
-                        ? String((e as { message?: unknown }).message)
-                        : "Failed to delete account";
-                    toast.error(message);
-                  } finally {
-                    setDeleting(false);
-                  }
-                }}
-                disabled={deleting}
-                className={btn(
-                  "border-red-600/50 bg-red-600 text-white hover:bg-red-600/90 disabled:opacity-60"
-                )}
-              >
-                <Trash2 className="h-4 w-4" />
-                {deleting ? "Deleting..." : "Delete account"}
-              </button>
-            </div>
-
-            <div className="rounded-md border bg-muted/30 p-4 text-xs leading-relaxed space-y-2">
-              <div className="font-medium text-muted-foreground uppercase tracking-wide text-[10px]">
-                Session
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <span className="text-muted-foreground">Session ID</span>
-                <span className="font-mono text-[11px] break-all">
-                  {session.session.id}
-                </span>
-                <span className="text-muted-foreground">Discord ID</span>
-                <span className="font-mono text-[11px] break-all">
-                  {profile?.discordId || "—"}
-                </span>
-                <span className="text-muted-foreground">Expires</span>
-                <span className="font-mono text-[11px]">
-                  {new Date(session.session.expiresAt).toLocaleString()}
-                </span>
-                <span className="text-muted-foreground">Issued</span>
-                <span className="font-mono text-[11px]">
-                  {new Date(session.session.createdAt).toLocaleString()}
-                </span>
-              </div>
+              <AiUsage />
             </div>
           </div>
-
-          <div className="space-y-4">
-            <AiUsage />
-          </div>
-        </div>
+        </ScrollArea>
       </div>
     </section>
   );

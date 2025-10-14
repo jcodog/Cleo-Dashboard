@@ -73,6 +73,7 @@ model Users {
   cleoPersonalityName  String?
   cleoPersonalityId    String?
   cleoPersonality      CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id], onDelete: SetNull)
+  TwitchLink           TwitchLink[]
 }
 
 model Limits {
@@ -186,6 +187,43 @@ model AutomodConfig {
   guild           Servers  @relation(fields: [guildId], references: [id], onDelete: Cascade)
 }
 
+model Testimonials {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  displayName String
+  userImg     String
+  userId      String?
+  rating      Int
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+}
+
+model TwitchLink {
+  id String @id @default(cuid())
+
+  // App-level linkage
+  userId String
+  user   Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Better Auth Account row for provider "twitch"
+  baAccountId String  @unique
+  baAccount   Account @relation(fields: [baAccountId], references: [id], onDelete: Cascade, map: "twitch_ba_account_fk")
+
+  // Twitch identity
+  twitchUserId String  @unique // Helix "user_id"
+  login        String? // lowercased "login"
+  displayName  String? // "display_name"
+  profileImage String?
+
+  // Scopes snapshot and token expiry mirror for convenience
+  scopes        String? // space or comma separated
+  accessExpires DateTime? // copy of Account.accessTokenExpiresAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model User {
   id            String    @id
   name          String
@@ -223,11 +261,11 @@ model Session {
 }
 
 model Account {
-  id                    String    @id
+  id                    String      @id
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -235,8 +273,9 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  TwitchLink            TwitchLink?
 
   @@map("account")
 }

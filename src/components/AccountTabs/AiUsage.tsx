@@ -125,7 +125,7 @@ export const AiUsage = () => {
       ) : error ? (
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-destructive">Failed to load usage.</p>
-          <Button size="sm" variant="outline" onClick={() => refetch()}>
+          <Button size="sm" variant="glass" onClick={() => refetch()}>
             Retry
           </Button>
         </div>
