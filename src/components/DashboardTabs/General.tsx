@@ -80,9 +80,9 @@ export const General = ({
           ))}
         </div>
       </Panel>
-      <div id="server-info" className="flex flex-col gap-6 items-center pb-8">
+      <div id="server-info" className="flex flex-col gap-6 pb-8 w-full">
         {isLoading ? null : !data ? (
-          <Panel className="w-full max-w-2xl">
+          <Panel className="w-full">
             <EmptyState
               variant="subtle"
               heading="No data available"
@@ -91,21 +91,21 @@ export const General = ({
           </Panel>
         ) : (
           <>
-            <Panel className="w-full max-w-2xl">
+            <Panel className="w-full">
               <ServerInfo
                 apiGuild={data?.guild as NonNullable<typeof data>["guild"]}
                 isDirty={isDirty}
                 setDirtyAction={setDirtyAction}
               />
             </Panel>
-            <Panel className="w-full max-w-2xl">
+            <Panel className="w-full">
               <InviteLink
                 guild={data?.dbGuild as NonNullable<typeof data>["dbGuild"]}
                 isDirty={isDirty}
                 setDirtyAction={setDirtyAction}
               />
             </Panel>
-            <Panel variant="danger" className="w-full max-w-2xl">
+            <Panel variant="danger" className="w-full">
               {data && data.dbGuild && (
                 // <DeleteGuild isOwner={data.isOwner} guildId={data.dbGuild.id} />
                 <DeleteGuild isOwner={data.isOwner} />

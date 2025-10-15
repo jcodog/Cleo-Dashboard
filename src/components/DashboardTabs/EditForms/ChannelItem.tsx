@@ -70,8 +70,8 @@ export const ChannelItem = ({
   }, [channelName, channelId]);
 
   return (
-    <li className="group flex gap-4 items-center w-full max-w-3xl rounded-lg border border-border/55 bg-card/60 backdrop-blur-sm px-4 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-colors hover:bg-card/70">
-      <div className="flex min-w-48 h-full items-center">
+    <li className="group grid grid-cols-[190px_1fr_auto] gap-4 items-center w-full rounded-lg border border-border/55 bg-card/60 backdrop-blur-sm px-4 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-colors hover:bg-card/70">
+      <div className="flex h-full items-center">
         <h3 className="text-sm font-medium tracking-wide text-muted-foreground group-hover:text-foreground transition-colors uppercase">
           {settingName}
         </h3>
@@ -120,7 +120,7 @@ export const ChannelItem = ({
           </p>
         )}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 justify-end">
         {editing ? (
           <Button
             variant="gradient"
