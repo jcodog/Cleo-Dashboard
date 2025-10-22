@@ -197,11 +197,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
           </div>
 
           <div className="flex gap-2">
-            <Button
-              onClick={() => router.push("/dashboard")}
-              variant="gradient"
-              className="cursor-pointer"
-            >
+            <Button onClick={() => router.push("/dashboard")} variant="glass">
               <House className="size-4" />
               Home
             </Button>

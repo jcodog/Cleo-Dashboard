@@ -71,7 +71,7 @@ InviteLinkProps) => {
           placeholder="https://discord.com/invite/example"
           onChange={(e) => setInviteLink(e.target.value)}
         />
-        <Button disabled={isDisabled} type="submit" variant="gradient">
+        <Button disabled={isDisabled} type="submit" variant="glass">
           Save
         </Button>
       </form>
@@ -85,7 +85,7 @@ InviteLinkProps) => {
             <TooltipTrigger asChild>
               <span tabIndex={0}>
                 <Button
-                  variant="outline"
+                  variant="glass"
                   disabled={!canCreateInvite}
                   onClick={(e) => {
                     e.preventDefault();

@@ -33,7 +33,7 @@ export const DeleteGuild = ({ isOwner }: DeleteGuildProps) => {
             className={cn(
               isOwner ? "hover:cursor-pointer" : "hover:cursor-not-allowed"
             )}
-            variant="destructive"
+            variant="glass-destructive"
             disabled={!isOwner}
           >
             <Trash className="size-4" /> Delete server

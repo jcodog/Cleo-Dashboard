@@ -58,7 +58,7 @@ function matches(pathname: string, patterns: RegExp[]) {
   return patterns.some((r) => r.test(pathname));
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Block bots from all areas except root and policies
@@ -147,10 +147,8 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Use Node.js runtime so we can call auth.api directly (Next 15.2+ recommended)
-  runtime: "nodejs",
   matcher: [
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
-  ],
+  ]
 };

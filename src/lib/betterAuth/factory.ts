@@ -2,7 +2,7 @@ import { getDb } from "@/lib/prisma";
 import { loadStripe } from "@/lib/stripe";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-// import { lastLoginMethod } from "better-auth/plugins";
+import { lastLoginMethod } from "better-auth/plugins";
 
 /**
  * Environment configuration used to initialize Better Auth and related services.
@@ -18,8 +18,6 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
  * @property DISCORD_CLIENT_ID - Discord OAuth client id.
  * @property DISCORD_CLIENT_SECRET - Discord OAuth client secret.
  * @property STRIPE_SECRET_KEY - Stripe secret API key for Customer creation/backfill.
- * @property TWITCH_CLIENT_ID - Twitch OAuth client id.
- * @property TWITCH_CLIENT_SECRET - Twitch OAuth client secret.
  */
 export type AuthEnv = {
   DATABASE_URL: string;
@@ -29,8 +27,6 @@ export type AuthEnv = {
   DISCORD_CLIENT_ID?: string;
   DISCORD_CLIENT_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
-  TWITCH_CLIENT_ID?: string;
-  TWITCH_CLIENT_SECRET?: string;
 };
 
 /**
@@ -38,7 +34,7 @@ export type AuthEnv = {
  *
  * This function wires up:
  * - Prisma adapter using the provided DATABASE_URL
- * - Discord and Twitch social providers
+ * - Discord social provider
  * - Cookie domain normalization for cross-subdomain auth between Next and Workers
  * - Account creation/linking hooks that also synchronize your app's Users table
  *   and backfill Stripe Customers when configured
@@ -163,13 +159,6 @@ export const createAuth = (env: AuthEnv) => {
             emailVerified: profile.verified,
           };
         },
-      },
-
-      twitch: {
-        enabled: true,
-        clientId: env.TWITCH_CLIENT_ID ?? "",
-        clientSecret: env.TWITCH_CLIENT_SECRET ?? "",
-        scope: ["user:read:email", "chat:read", "chat:edit"],
       },
     },
     user: {
@@ -427,72 +416,6 @@ export const createAuth = (env: AuthEnv) => {
                 throw e;
               }
             }
-
-            if (account.providerId === "twitch") {
-              try {
-                // Find the app user using Better Auth user id
-                const appUser = await prisma.users.findUnique({
-                  where: { extId: account.userId },
-                });
-
-                if (!appUser) {
-                  // If somehow Twitch was linked before a Users row exists,
-                  // create the Users row minimally or just exit and log.
-                  console.warn(
-                    "[better-auth:twitch.link] Users row missing for extId",
-                    account.userId
-                  );
-                  return;
-                }
-
-                // Grab the Better Auth Account row so we can read expiry and scopes
-                const baAcc = await prisma.account.findUnique({
-                  where: { id: account.id },
-                });
-
-                // Upsert the TwitchAccounts record
-                await prisma.twitchLink.upsert({
-                  where: { twitchUserId: account.accountId },
-                  create: {
-                    userId: appUser.id,
-                    baAccountId: account.id,
-                    twitchUserId: account.accountId,
-                    scopes: baAcc?.scope ?? null,
-                    accessExpires: baAcc?.accessTokenExpiresAt ?? null,
-                    // Optionally fill login/displayName/profileImage below after Helix call
-                  },
-                  update: {
-                    userId: appUser.id,
-                    baAccountId: account.id,
-                    scopes: baAcc?.scope ?? null,
-                    accessExpires: baAcc?.accessTokenExpiresAt ?? null,
-                  },
-                });
-
-                // Optional enrichment: fetch Twitch user profile via Helix and update
-                // You can do this here or in a background job.
-                // Example shape:
-                // const helixUser = await fetch("https://api.twitch.tv/helix/users", { headers: ... })
-                // await prisma.twitchAccounts.update({
-                //   where: { twitchUserId: account.accountId },
-                //   data: {
-                //     login: helixUser.login,
-                //     displayName: helixUser.display_name,
-                //     profileImage: helixUser.profile_image_url,
-                //   },
-                // });
-
-                console.log(
-                  "[better-auth:twitch.link] Linked Twitch to user",
-                  appUser.id,
-                  "twitchUserId",
-                  account.accountId
-                );
-              } catch (e) {
-                console.error("[better-auth:twitch.link] failed", e);
-              }
-              return;
-            }
           },
         },
       },
@@ -510,17 +433,17 @@ export const createAuth = (env: AuthEnv) => {
       "http://localhost:8080",
     ],
     plugins: [
-      // lastLoginMethod({
-      //   cookieName: "better-auth.last_used_login_method",
-      //   maxAge: 60 * 60 * 24 * 90,
-      //   storeInDatabase: true,
-      // }),
+      lastLoginMethod({
+        cookieName: "better-auth.last_used_login_method",
+        maxAge: 60 * 60 * 24 * 90,
+        storeInDatabase: true,
+      }),
     ],
     account: {
       accountLinking: {
         enabled: true,
         allowDifferentEmails: true,
-        trustedProviders: ["discord", "twitch"],
+        trustedProviders: ["discord"],
       },
     },
   });

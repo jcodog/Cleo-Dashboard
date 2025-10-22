@@ -83,7 +83,7 @@ export const Channels = ({ guildId, getTokenAction }: TabProps) => {
           <p className="text-muted-foreground text-sm">Loading channels...</p>
         ) : (
           // Constrain inner content for readability while outer panel is full width
-          <ul className="flex flex-col gap-3 w-full max-w-4xl pr-2">
+          <ul className="flex flex-col gap-3 w-full pr-2">
             <ChannelItem
               settingName={channelLabels.welcomeChannel!}
               channelName={welcomeChannel.name}

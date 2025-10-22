@@ -109,7 +109,7 @@ export const ServerInfo = ({ apiGuild, setDirtyAction }: ServerInfoProps) => {
           <Button
             type="submit"
             disabled={isDisabled}
-            variant="gradient"
+            variant="glass"
             className="min-w-32"
           >
             {isDisabled ? "No changes" : "Save changes"}
