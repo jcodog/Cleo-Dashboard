@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "Next.JS DevTools": {
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"]
+    }
+  }
+}
