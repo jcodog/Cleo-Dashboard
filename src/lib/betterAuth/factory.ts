@@ -27,6 +27,8 @@ export type AuthEnv = {
   DISCORD_CLIENT_ID?: string;
   DISCORD_CLIENT_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
+  KICK_CLIENT_ID?: string;
+  KICK_CLIENT_SECRET?: string;
 };
 
 /**
@@ -95,26 +97,8 @@ export const createAuth = (env: AuthEnv) => {
     }
   }
 
-  if (
-    normalizedCookieDomain &&
-    normalizedCookieDomain.startsWith("localhost")
-  ) {
-    warned.push(
-      `Omitting Domain attribute for localhost ('${normalizedCookieDomain}'); cross-subdomain sharing is not needed in local dev.`
-    );
-    normalizedCookieDomain = undefined;
-  }
-
   if (warned.length) {
     console.warn("[auth:cookies]", warned.join(" "));
-  }
-
-  if (process.env.BETTER_AUTH_DEBUG_COOKIES === "1") {
-    console.log("[auth:cookies:config]", {
-      normalizedCookieDomain,
-      siteUrl: env.NEXT_PUBLIC_SITE_URL,
-      rawCookieDomain: raw || null,
-    });
   }
 
   /** Stripe client configured from STRIPE_SECRET_KEY (if present). */
@@ -159,6 +143,21 @@ export const createAuth = (env: AuthEnv) => {
             emailVerified: profile.verified,
           };
         },
+      },
+
+      kick: {
+        enabled: Boolean(env.KICK_CLIENT_ID && env.KICK_CLIENT_SECRET),
+        clientId: env.KICK_CLIENT_ID ?? "",
+        clientSecret: env.KICK_CLIENT_SECRET ?? "",
+        scope: [
+          "user:read",
+          "channel:read",
+          "channel:write",
+          "chat:write",
+          "streamkey:read",
+          "events:subscribe",
+          "moderation:ban",
+        ],
       },
     },
     user: {
@@ -443,7 +442,7 @@ export const createAuth = (env: AuthEnv) => {
       accountLinking: {
         enabled: true,
         allowDifferentEmails: true,
-        trustedProviders: ["discord"],
+        trustedProviders: ["discord", "kick"],
       },
     },
   });

@@ -177,8 +177,8 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
   ) : (
     <section className="relative flex flex-1 min-h-0 flex-col items-center p-4 sm:p-6">
       {/* Expanded overall max width for more breathing room on guild dashboard */}
-      <div className="flex h-full max-h-full w-full max-w-[1600px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.25)]">
-        <div className="flex w-full gap-4 p-5 items-center justify-between rounded-t-xl bg-gradient-to-b from-accent/60 to-accent/30 border-b border-border/60 shrink-0">
+      <div className="flex h-full max-h-full w-full max-w-[1600px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card/70 backdrop-blur supports-backdrop-filter:bg-card/60 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.25)]">
+        <div className="flex w-full gap-4 p-5 items-center justify-between rounded-t-xl bg-linear-to-b from-accent/60 to-accent/30 border-b border-border/60 shrink-0">
           <div className="flex gap-4 items-center justify-start min-w-0">
             <div className="relative h-11 w-11 shrink-0">
               <Image
@@ -258,6 +258,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
                   showName={true}
                   size={30}
                   className="h-10 px-3"
+                  align="start"
                 />
               ) : null}
               <div className="shrink-0">

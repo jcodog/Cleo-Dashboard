@@ -53,6 +53,7 @@ const PUBLIC_PATHS: RegExp[] = [
 
 // Staff-only sections
 const STAFF_PATHS: RegExp[] = [/^\/staff(.*)$/, /^\/logs(.*)$/];
+const KICK_PROTECTED_PATH = /^\/kick\/.+/;
 
 function matches(pathname: string, patterns: RegExp[]) {
   return patterns.some((r) => r.test(pathname));
@@ -82,16 +83,31 @@ export async function proxy(req: NextRequest) {
     session?: { id: string };
   } | null;
 
+  let authoritativeSession:
+    | Awaited<ReturnType<typeof auth.api.getSession>>
+    | null
+    | undefined;
+
+  const ensureAuthoritativeSession = async () => {
+    if (authoritativeSession !== undefined) {
+      return authoritativeSession;
+    }
+    try {
+      authoritativeSession = await auth.api.getSession({
+        headers: req.headers,
+      });
+    } catch {
+      authoritativeSession = null;
+    }
+    return authoritativeSession;
+  };
+
   // If cookie cache missing, attempt an authoritative lightweight session fetch once.
   // (This helps immediately after OAuth callback when cookies were just set.)
   if (!cookieSession) {
-    try {
-      const full = await auth.api.getSession({ headers: req.headers });
-      if (full) {
-        cookieSession = { session: { id: full.session.id } };
-      }
-    } catch {
-      // swallow; we'll treat as unauthenticated below
+    const full = await ensureAuthoritativeSession();
+    if (full) {
+      cookieSession = { session: { id: full.session.id } };
     }
   }
 
@@ -108,11 +124,47 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
+  if (KICK_PROTECTED_PATH.test(pathname)) {
+    const fullSession = await ensureAuthoritativeSession();
+    if (!fullSession) {
+      const signInUrl = new URL("/sign-in", req.url);
+      signInUrl.searchParams.set(
+        "redirect",
+        req.nextUrl.pathname + req.nextUrl.search
+      );
+      return NextResponse.redirect(signInUrl);
+    }
+
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      const kickUrl = new URL("/kick", req.url);
+      kickUrl.searchParams.set("missingKick", "1");
+      return NextResponse.redirect(kickUrl);
+    }
+
+    const db = getDb(databaseUrl);
+    const hasKickLink = await db.account.findFirst({
+      where: { userId: fullSession.user.id, providerId: "kick" },
+      select: { id: true },
+      cacheStrategy: { ttl: 60 },
+    });
+
+    if (!hasKickLink) {
+      const kickUrl = new URL("/kick", req.url);
+      kickUrl.searchParams.set("missingKick", "1");
+      kickUrl.searchParams.set(
+        "redirect",
+        req.nextUrl.pathname + req.nextUrl.search
+      );
+      return NextResponse.redirect(kickUrl);
+    }
+  }
+
   // Staff protection: perform authoritative role lookup via DB (NOT cookie-only)
   if (matches(pathname, STAFF_PATHS)) {
     try {
       // Validate session server-side to avoid forged cookie bypass; minimal fields
-      const fullSession = await auth.api.getSession({ headers: req.headers });
+      const fullSession = await ensureAuthoritativeSession();
       if (!fullSession) {
         const signInUrl = new URL("/sign-in", req.url);
         signInUrl.searchParams.set(
@@ -124,7 +176,11 @@ export async function proxy(req: NextRequest) {
 
       const userId = fullSession.user.id;
       // Assuming staff role stored on domain Users table (adjust if different schema)
-      const db = getDb(process.env.DATABASE_URL!);
+      const databaseUrl = process.env.DATABASE_URL;
+      if (!databaseUrl) {
+        throw new Error("DATABASE_URL missing");
+      }
+      const db = getDb(databaseUrl);
       const domainUser = await db.users.findUnique({
         where: { extId: userId },
         select: { role: true },
@@ -150,5 +206,5 @@ export const config = {
   matcher: [
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
-  ]
+  ],
 };

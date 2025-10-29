@@ -20,6 +20,8 @@ export const getWorkerAuth = (c: ContextWithSuperJSON<Env, any, {}>) => {
       DISCORD_CLIENT_ID: e.DISCORD_CLIENT_ID ?? "",
       DISCORD_CLIENT_SECRET: e.DISCORD_CLIENT_SECRET ?? "",
       STRIPE_SECRET_KEY: e.STRIPE_SECRET_KEY ?? "",
+      KICK_CLIENT_ID: e.KICK_CLIENT_ID ?? "",
+      KICK_CLIENT_SECRET: e.KICK_CLIENT_SECRET ?? "",
     });
   }
 

@@ -20,6 +20,8 @@ export interface Env {
     BETTER_AUTH_SECRET: string;
     NEXT_PUBLIC_SITE_URL: string;
     COOKIE_DOMAIN: string;
+    KICK_CLIENT_ID: string;
+    KICK_CLIENT_SECRET: string;
   };
 }
 

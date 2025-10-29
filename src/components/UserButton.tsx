@@ -19,6 +19,7 @@ export type UserButtonProps = {
   className?: string;
   showName?: boolean;
   size?: number; // avatar size in px
+  align?: "start" | "end";
 };
 
 /**
@@ -31,6 +32,7 @@ export function UserButton({
   className,
   showName = true,
   size = 32,
+  align = "end",
 }: UserButtonProps) {
   const [open, setOpen] = useState(false);
   const { useSession, signOut } = authClient;
@@ -117,7 +119,7 @@ export function UserButton({
           />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align={align} className="w-56">
         <DropdownMenuLabel className="flex gap-2 items-center">
           <User2 className="h-4 w-4" />
           <span className="truncate" title={label}>

@@ -12,6 +12,8 @@ export const auth = (() => {
       DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID ?? "",
       DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET ?? "",
       STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? "",
+      KICK_CLIENT_ID: process.env.KICK_CLIENT_ID ?? "",
+      KICK_CLIENT_SECRET: process.env.KICK_CLIENT_SECRET ?? "",
     });
   }
 
