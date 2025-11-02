@@ -390,7 +390,7 @@ export const createAuth = (env: AuthEnv) => {
                 }
                 // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
                 // We intentionally suppress the lint rules for this line only.
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
               } catch (e: any) {
                 // Convert unique collisions into claims (handles races / parallel requests)
                 if (
@@ -519,7 +519,7 @@ export const createAuth = (env: AuthEnv) => {
                 }
                 // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
                 // We intentionally suppress the lint rules for this line only.
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
               } catch (e: any) {
                 if (
                   e.code === "P2002" &&
