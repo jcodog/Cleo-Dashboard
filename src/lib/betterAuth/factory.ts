@@ -191,73 +191,95 @@ export const createAuth = (env: AuthEnv) => {
            */
           after: async (account) => {
             const prisma = db;
+            if (
+              account.providerId !== "discord" &&
+              account.providerId !== "kick"
+            ) {
+              return;
+            }
+
+            // Pull the Better Auth User so we can read email/name/locale
+            const authUser = await prisma.user
+              .findUnique({ where: { id: account.userId } })
+              .catch(() => null);
+
+            // Helper: generate a collision-safe username shared by all providers
+            const pickUniqueUsername = async (base: string) => {
+              const safe = base
+                .toLowerCase()
+                .replace(/[^a-z0-9_]/g, "_")
+                .slice(0, 30);
+              let candidate = safe;
+              for (let i = 0; i < 5; i++) {
+                const hit = await prisma.users
+                  .findUnique({ where: { username: candidate } })
+                  .catch(() => null);
+                if (!hit) return candidate;
+                candidate = `${safe}_${Math.random().toString(36).slice(2, 6)}`;
+              }
+              return candidate;
+            };
+
+            const displayBase =
+              authUser?.username ??
+              authUser?.name ??
+              (authUser?.email
+                ? authUser.email.split("@")[0]
+                : `user_${account.userId.slice(0, 6)}`);
+
+            const username = await pickUniqueUsername(displayBase);
+
+            const ensureStripeCustomer = async (userRecord: {
+              id: string;
+              email: string | null;
+              username: string | null;
+              extId: string | null;
+              customerId: string | null;
+            }) => {
+              if (!stripe) return;
+              if (userRecord.customerId) return;
+              try {
+                const customer = await stripe.customers.create({
+                  email: userRecord.email || undefined,
+                  name: userRecord.username || undefined,
+                  metadata: { extId: userRecord.extId || userRecord.id },
+                });
+                await prisma.users.update({
+                  where: { id: userRecord.id },
+                  data: { customerId: customer.id },
+                });
+              } catch (e) {
+                console.error(
+                  "[better-auth:account.created] stripe backfill failed",
+                  e
+                );
+              }
+            };
 
             if (account.providerId === "discord") {
-              // Pull the Better Auth User so we can read email/name/locale
-              const authUser = await prisma.user.findUnique({
-                where: { id: account.userId },
-                /**
-                 * Generate a username from a base label with collision mitigation.
-                 * The username is lowercased, sanitized to [a-z0-9_], trimmed to 30 chars,
-                 * and up to 5 attempts are made by appending a short random suffix.
-                 *
-                 * @param base - Suggested display name to derive a username from
-                 * @returns A unique username not present in prisma.users
-                 */
-              });
-
-              // Helper: generate a collision-safe username
-              const pickUniqueUsername = async (base: string) => {
-                const safe = base
-                  .toLowerCase()
-                  .replace(/[^a-z0-9_]/g, "_")
-                  .slice(0, 30);
-                let candidate = safe;
-                for (let i = 0; i < 5; i++) {
-                  const hit = await prisma.users
-                    .findUnique({ where: { username: candidate } })
-                    .catch(() => null);
-                  if (!hit) return candidate;
-                  candidate = `${safe}_${Math.random()
-                    .toString(36)
-                    .slice(2, 6)}`;
-                }
-                return candidate;
-              };
-
-              const display =
-                authUser?.username ??
-                authUser?.name ??
-                (authUser?.email
-                  ? authUser.email.split("@")[0]
-                  : `user_${account.userId.slice(0, 6)}`);
-
-              const username = await pickUniqueUsername(display as string);
-
               // 0) Already linked by extId? (app user exists and is attached to this BA user)
               const byExt = await prisma.users.findFirst({
                 where: { extId: account.userId },
               });
               if (byExt) {
-                // Stripe backfill (same logic you had)
-                if (stripe && !byExt.customerId) {
-                  try {
-                    const customer = await stripe.customers.create({
-                      email: byExt.email || undefined,
-                      name: byExt.username || undefined,
-                      metadata: { extId: byExt.extId || "" },
-                    });
-                    await prisma.users.update({
-                      where: { id: byExt.id },
-                      data: { customerId: customer.id },
-                    });
-                  } catch (e) {
-                    console.error(
-                      "[better-auth:account.created] stripe backfill failed",
-                      e
-                    );
-                  }
+                let target = byExt;
+                const needsUpdate =
+                  byExt.discordId !== account.accountId ||
+                  (authUser?.email && !byExt.email) ||
+                  (authUser?.locale && !byExt.timezone) ||
+                  byExt.username !== username;
+                if (needsUpdate) {
+                  target = await prisma.users.update({
+                    where: { id: byExt.id },
+                    data: {
+                      username,
+                      discordId: account.accountId,
+                      email: byExt.email ?? authUser?.email ?? null,
+                      timezone: byExt.timezone ?? authUser?.locale ?? null,
+                    },
+                  });
                 }
+                await ensureStripeCustomer(target);
                 return;
               }
 
@@ -267,7 +289,7 @@ export const createAuth = (env: AuthEnv) => {
                 .catch(() => null);
 
               if (byDiscord && byDiscord.extId !== account.userId) {
-                await prisma.users.update({
+                const updated = await prisma.users.update({
                   where: { id: byDiscord.id },
                   data: {
                     username,
@@ -276,26 +298,7 @@ export const createAuth = (env: AuthEnv) => {
                     timezone: authUser?.locale ?? byDiscord.timezone ?? null,
                   },
                 });
-
-                // Stripe backfill on claim
-                if (stripe && !byDiscord.customerId) {
-                  try {
-                    const customer = await stripe.customers.create({
-                      email: byDiscord.email || authUser?.email || undefined,
-                      name: byDiscord.username || undefined,
-                      metadata: { extId: account.userId || "" },
-                    });
-                    await prisma.users.update({
-                      where: { id: byDiscord.id },
-                      data: { customerId: customer.id },
-                    });
-                  } catch (e) {
-                    console.error(
-                      "[better-auth:account.created] stripe backfill failed",
-                      e
-                    );
-                  }
-                }
+                await ensureStripeCustomer(updated);
                 return;
               }
 
@@ -306,7 +309,7 @@ export const createAuth = (env: AuthEnv) => {
                   .catch(() => null);
 
                 if (byEmail && byEmail.extId !== account.userId) {
-                  await prisma.users.update({
+                  const updated = await prisma.users.update({
                     where: { id: byEmail.id },
                     data: {
                       username,
@@ -315,26 +318,7 @@ export const createAuth = (env: AuthEnv) => {
                       timezone: authUser?.locale ?? byEmail.timezone ?? null,
                     },
                   });
-
-                  // Stripe backfill on claim
-                  if (stripe && !byEmail.customerId) {
-                    try {
-                      const customer = await stripe.customers.create({
-                        email: byEmail.email || undefined,
-                        name: byEmail.username || undefined,
-                        metadata: { extId: account.userId || "" },
-                      });
-                      await prisma.users.update({
-                        where: { id: byEmail.id },
-                        data: { customerId: customer.id },
-                      });
-                    } catch (e) {
-                      console.error(
-                        "[better-auth:account.created] stripe backfill failed",
-                        e
-                      );
-                    }
-                  }
+                  await ensureStripeCustomer(updated);
                   return;
                 }
               }
@@ -352,24 +336,8 @@ export const createAuth = (env: AuthEnv) => {
                   },
                 });
 
-                // Stripe create & attach
                 if (stripe) {
-                  try {
-                    const customer = await stripe.customers.create({
-                      email: created.email || undefined,
-                      name: created.username || undefined,
-                      metadata: { extId: created.extId || created.id },
-                    });
-                    await prisma.users.update({
-                      where: { id: created.id },
-                      data: { customerId: customer.id },
-                    });
-                  } catch (e) {
-                    console.error(
-                      "[better-auth:account.created] stripe customer create failed",
-                      e
-                    );
-                  }
+                  await ensureStripeCustomer(created);
                 } else {
                   console.warn(
                     "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
@@ -386,7 +354,7 @@ export const createAuth = (env: AuthEnv) => {
                   e.meta?.target?.includes("email") &&
                   authUser?.email
                 ) {
-                  await prisma.users.update({
+                  const updated = await prisma.users.update({
                     where: { email: authUser.email },
                     data: {
                       username,
@@ -395,13 +363,14 @@ export const createAuth = (env: AuthEnv) => {
                       timezone: authUser?.locale ?? null,
                     },
                   });
+                  await ensureStripeCustomer(updated);
                   return;
                 }
                 if (
                   e.code === "P2002" &&
                   e.meta?.target?.includes("discordId")
                 ) {
-                  await prisma.users.update({
+                  const updated = await prisma.users.update({
                     where: { discordId: account.accountId },
                     data: {
                       username,
@@ -410,6 +379,132 @@ export const createAuth = (env: AuthEnv) => {
                       timezone: authUser?.locale ?? null,
                     },
                   });
+                  await ensureStripeCustomer(updated);
+                  return;
+                }
+                throw e;
+              }
+            }
+
+            if (account.providerId === "kick") {
+              // 0) Already linked by extId? (app user exists and is attached to this BA user)
+              const byExt = await prisma.users.findFirst({
+                where: { extId: account.userId },
+              });
+              if (byExt) {
+                let target = byExt;
+                const needsUpdate =
+                  byExt.kickId !== account.accountId ||
+                  (authUser?.email && !byExt.email) ||
+                  (authUser?.locale && !byExt.timezone) ||
+                  byExt.username !== username;
+                if (needsUpdate) {
+                  target = await prisma.users.update({
+                    where: { id: byExt.id },
+                    data: {
+                      username,
+                      kickId: account.accountId,
+                      email: byExt.email ?? authUser?.email ?? null,
+                      timezone: byExt.timezone ?? authUser?.locale ?? null,
+                    },
+                  });
+                }
+                await ensureStripeCustomer(target);
+                return;
+              }
+
+              // 1) Claim by kickId (if a user was pre-provisioned)
+              const byKick = await prisma.users
+                .findUnique({ where: { kickId: account.accountId } })
+                .catch(() => null);
+
+              if (byKick && byKick.extId !== account.userId) {
+                const updated = await prisma.users.update({
+                  where: { id: byKick.id },
+                  data: {
+                    username,
+                    extId: account.userId,
+                    email: byKick.email ?? authUser?.email ?? null,
+                    timezone: authUser?.locale ?? byKick.timezone ?? null,
+                  },
+                });
+                await ensureStripeCustomer(updated);
+                return;
+              }
+
+              // 2) Claim by email (covers existing users that signed up through Discord first)
+              if (authUser?.email) {
+                const byEmail = await prisma.users
+                  .findUnique({ where: { email: authUser.email } })
+                  .catch(() => null);
+
+                if (byEmail && byEmail.extId !== account.userId) {
+                  const updated = await prisma.users.update({
+                    where: { id: byEmail.id },
+                    data: {
+                      username,
+                      extId: account.userId,
+                      kickId: account.accountId,
+                      timezone: authUser?.locale ?? byEmail.timezone ?? null,
+                    },
+                  });
+                  await ensureStripeCustomer(updated);
+                  return;
+                }
+              }
+
+              // 3) Nothing to claim — create a fresh app user (Kick-first flow)
+              try {
+                const created = await prisma.users.create({
+                  data: {
+                    extId: account.userId,
+                    email: authUser?.email ?? null,
+                    username,
+                    kickId: account.accountId,
+                    timezone: authUser?.locale ?? null,
+                    limits: { create: { date: new Date() } },
+                  },
+                });
+
+                if (stripe) {
+                  await ensureStripeCustomer(created);
+                } else {
+                  console.warn(
+                    "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
+                  );
+                }
+
+                // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } catch (e: any) {
+                if (
+                  e.code === "P2002" &&
+                  e.meta?.target?.includes("email") &&
+                  authUser?.email
+                ) {
+                  const updated = await prisma.users.update({
+                    where: { email: authUser.email },
+                    data: {
+                      username,
+                      extId: account.userId,
+                      kickId: account.accountId,
+                      timezone: authUser?.locale ?? null,
+                    },
+                  });
+                  await ensureStripeCustomer(updated);
+                  return;
+                }
+                if (e.code === "P2002" && e.meta?.target?.includes("kickId")) {
+                  const updated = await prisma.users.update({
+                    where: { kickId: account.accountId },
+                    data: {
+                      username,
+                      extId: account.userId,
+                      email: authUser?.email ?? undefined,
+                      timezone: authUser?.locale ?? null,
+                    },
+                  });
+                  await ensureStripeCustomer(updated);
                   return;
                 }
                 throw e;

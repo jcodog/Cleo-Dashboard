@@ -1,4 +1,4 @@
-import { TabProps } from "@/app/dashboard/guild/[guildId]/page";
+import { TabProps } from "@/app/dashboard/d/guild/[guildId]/page";
 import { ChannelItem } from "@/components/DashboardTabs/EditForms/ChannelItem";
 import { Heading } from "@/components/Heading";
 import { Panel, PanelHeader } from "@/components/ui/panel";

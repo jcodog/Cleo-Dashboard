@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import DiscordAuthButton from "@/components/auth/DiscordAuthButton";
+import KickAuthButton from "@/components/auth/KickAuthButton";
 
 function SignInInner() {
   // const { useSession, getLastUsedLoginMethod } = authClient;
@@ -27,7 +28,9 @@ function SignInInner() {
     if (rawRedirect.startsWith("/")) return rawRedirect;
     return null;
   })();
-  const [loading, setLoading] = useState(false);
+  const [activeProvider, setActiveProvider] = useState<
+    "discord" | "kick" | null
+  >(null);
 
   const lastUsed = getLastUsedLoginMethod();
 
@@ -42,23 +45,17 @@ function SignInInner() {
   }, [session, redirectParam, router]);
 
   const handleDiscord = useCallback(async () => {
-    if (loading) return;
-    setLoading(true);
+    if (activeProvider) return;
+    setActiveProvider("discord");
     let safetyTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       safetyTimer = setTimeout(() => {
-        setLoading(false);
+        setActiveProvider(null);
         toast.error("Taking longer than expected. Please try again.");
       }, 6000);
       await authClient.signIn.social({ provider: "discord" });
-      // Allow the OAuth popup flow time before redirecting if still on page
-      setTimeout(() => {
-        if (loading) {
-          router.push(redirectParam || "/dashboard");
-        }
-      }, 4000);
     } catch (e: unknown) {
-      setLoading(false);
+      setActiveProvider(null);
       const message =
         typeof e === "object" && e && "message" in e
           ? String((e as { message?: unknown }).message)
@@ -67,7 +64,29 @@ function SignInInner() {
     } finally {
       if (safetyTimer) clearTimeout(safetyTimer);
     }
-  }, [loading, redirectParam, router]);
+  }, [activeProvider, redirectParam, router]);
+
+  const handleKick = useCallback(async () => {
+    if (activeProvider) return;
+    setActiveProvider("kick");
+    let safetyTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      safetyTimer = setTimeout(() => {
+        setActiveProvider(null);
+        toast.error("Taking longer than expected. Please try again.");
+      }, 6000);
+      await authClient.signIn.social({ provider: "kick" });
+    } catch (e: unknown) {
+      setActiveProvider(null);
+      const message =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : "Failed to start Kick sign-in";
+      toast.error(message || "Failed to start Kick sign-in");
+    } finally {
+      if (safetyTimer) clearTimeout(safetyTimer);
+    }
+  }, [activeProvider, redirectParam, router]);
 
   return (
     <section className="flex flex-1 items-center justify-center p-4">
@@ -87,12 +106,19 @@ function SignInInner() {
           </p>
         ) : (
           <>
-            <DiscordAuthButton
-              onClick={handleDiscord}
-              loading={loading}
-              disabled={isPending}
-              lastUsed={lastUsed ?? undefined}
-            />
+            <div className="flex flex-col gap-3">
+              <DiscordAuthButton
+                onClick={handleDiscord}
+                loading={activeProvider === "discord"}
+                disabled={isPending || activeProvider === "kick"}
+                lastUsed={lastUsed ?? undefined}
+              />
+              <KickAuthButton
+                onClick={handleKick}
+                loading={activeProvider === "kick"}
+                disabled={isPending || activeProvider === "discord"}
+              />
+            </div>
           </>
         )}
         <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">

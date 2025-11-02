@@ -1,6 +1,6 @@
 "use client";
 
-import { TabProps } from "@/app/dashboard/guild/[guildId]/page";
+import { TabProps } from "@/app/dashboard/d/guild/[guildId]/page";
 import { InviteLink } from "@/components/DashboardTabs/EditForms/InviteLink";
 import { ServerInfo } from "@/components/DashboardTabs/EditForms/ServerInfo";
 import { Heading } from "@/components/Heading";

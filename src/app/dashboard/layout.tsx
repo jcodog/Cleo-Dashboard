@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
 import { AmbientBackground } from "@/components/AmbientBackground";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
-const DashboardLayout = ({
+const DashboardLayout = async ({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) => {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    const target = encodeURIComponent("/dashboard");
+    redirect(`/sign-in?redirect=${target}`);
+  }
+
   return (
     <>
       {/* navbar */}

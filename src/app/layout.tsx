@@ -9,7 +9,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PreReleaseBanner } from "../components/PreReleaseBanner";
 // Removed Clerk avatar sync. If future avatar sync is needed, implement via Better Auth + Discord tokens.
-import { Databuddy } from "@databuddy/sdk";
+import { Databuddy } from "@databuddy/sdk/react";
 
 export const metadata: Metadata = {
   title: { default: "Cleo", template: "%s | Cleo" },

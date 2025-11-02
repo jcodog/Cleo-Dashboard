@@ -23,7 +23,7 @@ export const Panel = React.forwardRef<HTMLDivElement, PanelProps>(
       <div
         ref={ref}
         className={cn(
-          "relative rounded-lg border border-border/60 bg-card/65 backdrop-blur-sm supports-[backdrop-filter]:bg-card/55 shadow-[0_2px_4px_-2px_rgba(0,0,0,0.25),0_8px_24px_-12px_rgba(0,0,0,0.25)] transition-colors",
+          "relative rounded-lg border border-border/60 bg-card/65 backdrop-blur-sm supports-backdrop-filter:bg-card/55 shadow-[0_2px_4px_-2px_rgba(0,0,0,0.25),0_8px_24px_-12px_rgba(0,0,0,0.25)] transition-colors",
           "before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-linear-to-tr before:from-accent/40 before:to-transparent before:opacity-0 before:transition-opacity",
           interactive &&
             "hover:before:opacity-100 hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.35),0_10px_32px_-8px_rgba(0,0,0,0.35)] hover:border-border/80",

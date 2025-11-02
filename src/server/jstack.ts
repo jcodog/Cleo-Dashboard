@@ -240,10 +240,11 @@ const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
   }
 
   // Auto-heal: if appUser.discordId is a provisional value (starts with 'pending-') or mismatched but empty, sync it.
-  if (
-    appUser.discordId.startsWith("pending-") ||
-    appUser.discordId !== discordId
-  ) {
+  const needsDiscordSync =
+    (appUser.discordId?.startsWith("pending-") ?? false) ||
+    appUser.discordId !== discordId;
+
+  if (needsDiscordSync) {
     try {
       appUser = await db.users.update({
         where: { id: appUser.id },

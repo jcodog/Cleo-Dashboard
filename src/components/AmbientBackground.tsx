@@ -36,17 +36,17 @@ export function AmbientBackground({
       />
 
       {/* Subtle grid lines with radial mask */}
-      <div className="absolute inset-0 opacity-[0.15] [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:48px_48px]" />
+      <div className="absolute inset-0 opacity-[0.15] mask-[radial-gradient(ellipse_at_center,black,transparent_70%)]">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-size-[48px_48px]" />
       </div>
 
       {/* Animated aurora blobs (spin + gentle float) */}
       <div
         className={cn(
-          "absolute rounded-full blur-3xl opacity-25 will-change-[transform]",
+          "absolute rounded-full blur-3xl opacity-25 will-change-transform",
           isLanding
-            ? "-top-40 -left-32 h-[38rem] w-[38rem] bg-linear-to-tr from-fuchsia-500/40 via-purple-400/40 to-indigo-400/40"
-            : "-top-60 -right-40 h-[42rem] w-[42rem] bg-linear-to-tr from-fuchsia-500/30 via-purple-400/30 to-indigo-400/30"
+            ? "-top-40 -left-32 h-152 w-152 bg-linear-to-tr from-fuchsia-500/40 via-purple-400/40 to-indigo-400/40"
+            : "-top-60 -right-40 h-168 w-2xl bg-linear-to-tr from-fuchsia-500/30 via-purple-400/30 to-indigo-400/30"
         )}
         style={{
           animation:
@@ -55,10 +55,10 @@ export function AmbientBackground({
       />
       <div
         className={cn(
-          "absolute rounded-full blur-3xl opacity-25 will-change-[transform]",
+          "absolute rounded-full blur-3xl opacity-25 will-change-transform",
           isLanding
-            ? "-bottom-56 -right-44 h-[44rem] w-[44rem] bg-linear-to-br from-cyan-400/40 via-sky-400/30 to-emerald-400/30"
-            : "-bottom-40 -left-44 h-[46rem] w-[46rem] bg-linear-to-br from-cyan-400/30 via-sky-400/25 to-emerald-400/25"
+            ? "-bottom-56 -right-44 h-176 w-176 bg-linear-to-br from-cyan-400/40 via-sky-400/30 to-emerald-400/30"
+            : "-bottom-40 -left-44 h-184 w-184 bg-linear-to-br from-cyan-400/30 via-sky-400/25 to-emerald-400/25"
         )}
         style={{
           animation:
@@ -67,8 +67,8 @@ export function AmbientBackground({
       />
 
       {/* Drifting pill highlights */}
-      <div className="absolute left-1/2 top-1/3 h-64 w-[42rem] -translate-x-1/2 -rotate-12 rounded-full bg-linear-to-r from-transparent via-white/8 to-transparent blur-2xl" />
-      <div className="absolute left-1/3 top-2/3 h-56 w-[36rem] -translate-x-1/2 rotate-12 rounded-full bg-linear-to-r from-transparent via-white/6 to-transparent blur-2xl" />
+      <div className="absolute left-1/2 top-1/3 h-64 w-2xl -translate-x-1/2 -rotate-12 rounded-full bg-linear-to-r from-transparent via-white/8 to-transparent blur-2xl" />
+      <div className="absolute left-1/3 top-2/3 h-56 w-xl -translate-x-1/2 rotate-12 rounded-full bg-linear-to-r from-transparent via-white/6 to-transparent blur-2xl" />
 
       {/* Film grain */}
       <div className="absolute inset-0 opacity-[0.07] mix-blend-soft-light [background-image:url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 300 300\'><filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'2\' stitchTiles=\'stitch\'/></filter><rect width=\'100%\' height=\'100%\' filter=\'url(%23n)\' opacity=\'0.6\'/></svg>')]" />

@@ -6,6 +6,7 @@ export interface DomainUser {
   id: string;
   extId: string;
   discordId: string | null;
+  kickId: string | null;
   email?: string | null;
   username?: string | null;
   name?: string | null;
