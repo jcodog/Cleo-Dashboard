@@ -22,6 +22,9 @@ const badgeVariants = cva(
         // Higher-contrast glass variant for busy/image backgrounds
         "glass-contrast":
           "text-white border-white/20 bg-black/55 shadow-md backdrop-blur-md backdrop-saturate-150 backdrop-brightness-[.85] ring-1 ring-black/40 relative before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:rounded-[inherit] before:bg-[radial-gradient(120%_120%_at_10%_0%,rgba(255,255,255,0.25),transparent_60%)] before:opacity-40 dark:ring-black/50",
+        // Muted glass badge for inactive/unlinked states
+        "glass-muted":
+          "text-white/75 border-white/16 bg-[linear-gradient(135deg,rgba(17,24,39,0.65),rgba(39,39,42,0.45))] backdrop-blur-md shadow-sm transition-colors relative before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:rounded-[inherit] before:bg-[radial-gradient(120%_120%_at_20%_0%,rgba(255,255,255,0.2),transparent_65%)] before:opacity-30",
       },
     },
     defaultVariants: {

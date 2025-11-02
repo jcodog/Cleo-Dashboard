@@ -149,7 +149,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
       if ("noPerm" in json) {
         const { toast } = await import("sonner");
         toast.error(json.error || "Permissions check failed");
-        router.push("/dashboard");
+        router.push("/dashboard/d");
         return;
       }
       // narrow union for success flag
@@ -197,7 +197,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={() => router.push("/dashboard")} variant="glass">
+            <Button onClick={() => router.push("/dashboard/d")} variant="glass">
               <House className="size-4" />
               Home
             </Button>
@@ -215,8 +215,8 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
                     if (!tab.disabled) {
                       const url =
                         tab.value === "overview"
-                          ? `/dashboard/guild/${guildId}`
-                          : `/dashboard/guild/${guildId}?tab=${tab.value}`;
+                          ? `/dashboard/d/guild/${guildId}`
+                          : `/dashboard/d/guild/${guildId}?tab=${tab.value}`;
                       confirmLeave(url);
                     }
                   }}

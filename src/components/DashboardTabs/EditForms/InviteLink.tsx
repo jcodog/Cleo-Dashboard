@@ -12,7 +12,13 @@ import {
 import { client } from "@/lib/client";
 import { Servers } from "@/prisma/client";
 import { useMutation } from "@tanstack/react-query";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  startTransition,
+  useEffect,
+  useState,
+} from "react";
 import { toast } from "sonner";
 
 interface InviteLinkProps {
@@ -49,7 +55,9 @@ InviteLinkProps) => {
   });
 
   useEffect(() => {
-    setInviteLink(guild.inviteLink || undefined);
+    startTransition(() => {
+      setInviteLink(guild.inviteLink || undefined);
+    });
   }, [guild.inviteLink]);
 
   const isDisabled = inviteLink === initialInviteLink;

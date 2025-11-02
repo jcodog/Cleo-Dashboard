@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 
-export interface DiscordAuthButtonProps {
+export interface AuthButtonProps {
   loading?: boolean;
   disabled?: boolean;
   children?: React.ReactNode; // override label if desired
@@ -17,7 +17,7 @@ export interface DiscordAuthButtonProps {
   lastUsed?: string;
 }
 
-export const DiscordAuthButton: React.FC<DiscordAuthButtonProps> = ({
+export const DiscordAuthButton: React.FC<AuthButtonProps> = ({
   loading,
   disabled,
   children,

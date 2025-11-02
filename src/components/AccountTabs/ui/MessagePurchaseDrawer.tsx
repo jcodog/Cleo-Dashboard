@@ -44,7 +44,7 @@ export const MessagePurchaseDrawer = () => {
         price: priceId,
         type: "payment",
         domain: process.env.NEXT_PUBLIC_APP_URL!,
-        path: "dashboard/account/usage",
+        path: "dashboard/account",
       });
 
       const { url, message } = await res.json();
@@ -93,7 +93,7 @@ export const MessagePurchaseDrawer = () => {
       {featured && (
         <Badge
           variant="glass"
-          className="pointer-events-none absolute -top-2 -left-2 z-[1] px-2 py-0.5 text-[10px] font-medium text-primary border-primary/30"
+          className="pointer-events-none absolute -top-2 -left-2 z-1 px-2 py-0.5 text-[10px] font-medium text-primary border-primary/30"
         >
           Recommended
         </Badge>

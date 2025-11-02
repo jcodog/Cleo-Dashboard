@@ -7,7 +7,7 @@ import { client } from "@/lib/client";
 import UserButton from "@/components/UserButton";
 import { useQuery } from "@tanstack/react-query";
 import { OAuth2Scopes } from "discord-api-types/v10";
-import { CircleCheck, CircleX, Loader, Plus } from "lucide-react";
+import { ArrowLeft, CircleCheck, CircleX, Loader, Plus } from "lucide-react";
 import Link from "next/link";
 import {
   Tooltip,
@@ -15,7 +15,6 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
 
 const DashboardDiscordPage = () => {
   const router = useRouter();
@@ -48,21 +47,20 @@ const DashboardDiscordPage = () => {
     },
   });
 
-  const guilds = useMemo(() => {
-    if (!guildQuery.data?.guilds) return null;
-    return guildQuery.data.guilds.map(
-      (server: (typeof guildQuery.data.guilds)[number]) => ({
-        ...server,
-        lastOpened: server.lastOpened ? new Date(server.lastOpened) : null,
-      })
-    );
-  }, [guildQuery.data]);
+  const guilds = guildQuery.data?.guilds
+    ? guildQuery.data.guilds.map(
+        (server: (typeof guildQuery.data.guilds)[number]) => ({
+          ...server,
+          lastOpened: server.lastOpened ? new Date(server.lastOpened) : null,
+        })
+      )
+    : null;
 
-  const isUserInstalled = useMemo(() => {
-    return oauthQuery.data?.currentOauth2Data?.scopes?.includes(
+  const isUserInstalled = Boolean(
+    oauthQuery.data?.currentOauth2Data?.scopes?.includes(
       OAuth2Scopes.ApplicationsCommands
-    );
-  }, [oauthQuery.data]);
+    )
+  );
 
   const unauthorized =
     guildQuery.error instanceof Error &&
@@ -71,7 +69,19 @@ const DashboardDiscordPage = () => {
   return (
     <section className="container mx-auto p-6 flex flex-1 min-h-0 flex-col items-center gap-8">
       <header className="w-full max-w-7xl shrink-0 flex items-center justify-between mb-4 rounded-xl border border-border/60 bg-card/70 backdrop-blur px-3 py-2 sm:px-4 sm:py-3">
-        <Heading className="text-2xl sm:text-3xl">Discord Dashboard</Heading>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Heading className="text-2xl sm:text-3xl">Discord Dashboard</Heading>
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={() => router.push("/dashboard")}
+            className="inline-flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Main Dashboard</span>
+            <span className="sm:hidden">Back</span>
+          </Button>
+        </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Tooltip>
             <TooltipTrigger asChild>

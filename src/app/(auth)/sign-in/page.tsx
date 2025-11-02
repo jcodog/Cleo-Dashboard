@@ -7,6 +7,13 @@ import { toast } from "sonner";
 import DiscordAuthButton from "@/components/auth/DiscordAuthButton";
 import KickAuthButton from "@/components/auth/KickAuthButton";
 
+type ProviderKey = "discord" | "kick";
+
+const PROVIDER_REDIRECTS: Record<ProviderKey, string> = {
+  discord: "/dashboard/d",
+  kick: "/dashboard/k",
+};
+
 function SignInInner() {
   // const { useSession, getLastUsedLoginMethod } = authClient;
   const { useSession, getLastUsedLoginMethod } = authClient;
@@ -28,21 +35,34 @@ function SignInInner() {
     if (rawRedirect.startsWith("/")) return rawRedirect;
     return null;
   })();
+  const lastUsedRaw = getLastUsedLoginMethod();
+  const lastUsedProvider =
+    lastUsedRaw === "discord" || lastUsedRaw === "kick"
+      ? (lastUsedRaw as ProviderKey)
+      : null;
+  const defaultRedirect =
+    redirectParam ??
+    (lastUsedProvider ? PROVIDER_REDIRECTS[lastUsedProvider] : "/dashboard");
+  const resolveRedirect = useCallback(
+    (provider: ProviderKey) =>
+      redirectParam ?? PROVIDER_REDIRECTS[provider] ?? "/dashboard",
+    [redirectParam]
+  );
   const [activeProvider, setActiveProvider] = useState<
     "discord" | "kick" | null
   >(null);
 
-  const lastUsed = getLastUsedLoginMethod();
+  const lastUsed = lastUsedProvider;
 
   // If already authenticated, redirect immediately (respect redirect param)
   useEffect(() => {
     if (session) {
-      const target = redirectParam || "/dashboard";
+      const target = defaultRedirect;
       if (window.location.pathname + window.location.search !== target) {
         router.replace(target);
       }
     }
-  }, [session, redirectParam, router]);
+  }, [session, defaultRedirect, router]);
 
   const handleDiscord = useCallback(async () => {
     if (activeProvider) return;
@@ -53,7 +73,10 @@ function SignInInner() {
         setActiveProvider(null);
         toast.error("Taking longer than expected. Please try again.");
       }, 6000);
-      await authClient.signIn.social({ provider: "discord" });
+      await authClient.signIn.social({
+        provider: "discord",
+        callbackURL: resolveRedirect("discord"),
+      });
     } catch (e: unknown) {
       setActiveProvider(null);
       const message =
@@ -64,7 +87,7 @@ function SignInInner() {
     } finally {
       if (safetyTimer) clearTimeout(safetyTimer);
     }
-  }, [activeProvider, redirectParam, router]);
+  }, [activeProvider, resolveRedirect]);
 
   const handleKick = useCallback(async () => {
     if (activeProvider) return;
@@ -75,7 +98,10 @@ function SignInInner() {
         setActiveProvider(null);
         toast.error("Taking longer than expected. Please try again.");
       }, 6000);
-      await authClient.signIn.social({ provider: "kick" });
+      await authClient.signIn.social({
+        provider: "kick",
+        callbackURL: resolveRedirect("kick"),
+      });
     } catch (e: unknown) {
       setActiveProvider(null);
       const message =
@@ -86,7 +112,7 @@ function SignInInner() {
     } finally {
       if (safetyTimer) clearTimeout(safetyTimer);
     }
-  }, [activeProvider, redirectParam, router]);
+  }, [activeProvider, resolveRedirect]);
 
   return (
     <section className="flex flex-1 items-center justify-center p-4">
@@ -117,6 +143,7 @@ function SignInInner() {
                 onClick={handleKick}
                 loading={activeProvider === "kick"}
                 disabled={isPending || activeProvider === "discord"}
+                lastUsed={lastUsed ?? undefined}
               />
             </div>
           </>

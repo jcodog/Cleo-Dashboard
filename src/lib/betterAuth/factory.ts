@@ -158,6 +158,36 @@ export const createAuth = (env: AuthEnv) => {
           "events:subscribe",
           "moderation:ban",
         ],
+        mapProfileToUser: (profile) => {
+          const rawProfile = profile as unknown as Record<string, unknown>;
+          const getString = (key: string) => {
+            const value = rawProfile[key];
+            return typeof value === "string" ? value : undefined;
+          };
+
+          const usernameCandidate =
+            getString("username") ??
+            getString("user_name") ??
+            getString("slug") ??
+            getString("login") ??
+            getString("display_name");
+
+          const nameCandidate =
+            getString("display_name") ?? getString("name") ?? usernameCandidate;
+
+          const imageCandidate =
+            getString("profile_picture") ??
+            getString("avatar") ??
+            getString("image") ??
+            getString("profileImage");
+
+          return {
+            email: getString("email"),
+            name: nameCandidate,
+            image: imageCandidate,
+            username: usernameCandidate,
+          };
+        },
       },
     },
     user: {
@@ -204,30 +234,45 @@ export const createAuth = (env: AuthEnv) => {
               .catch(() => null);
 
             // Helper: generate a collision-safe username shared by all providers
-            const pickUniqueUsername = async (base: string) => {
-              const safe = base
-                .toLowerCase()
-                .replace(/[^a-z0-9_]/g, "_")
-                .slice(0, 30);
-              let candidate = safe;
+            const createRandomUsername = () =>
+              `cleo_${Math.random().toString(36).slice(2, 10)}`;
+
+            const normalizeUsername = (value: string) => {
+              const lowered = value.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+              const squashed = lowered.replace(/_+/g, "_");
+              const trimmed = squashed.replace(/^_+|_+$/g, "");
+              return trimmed.slice(0, 30);
+            };
+
+            const ensureSafeUsername = (value: string) => {
+              const normalized = normalizeUsername(value);
+              if (normalized.length) return normalized;
+              return normalizeUsername(createRandomUsername());
+            };
+
+            const pickUniqueUsername = async (raw: string) => {
+              const base = ensureSafeUsername(raw);
+              let candidate = base;
               for (let i = 0; i < 5; i++) {
                 const hit = await prisma.users
                   .findUnique({ where: { username: candidate } })
                   .catch(() => null);
                 if (!hit) return candidate;
-                candidate = `${safe}_${Math.random().toString(36).slice(2, 6)}`;
+                candidate = ensureSafeUsername(
+                  `${base}_${Math.random().toString(36).slice(2, 6)}`
+                );
               }
               return candidate;
             };
 
-            const displayBase =
-              authUser?.username ??
-              authUser?.name ??
-              (authUser?.email
-                ? authUser.email.split("@")[0]
-                : `user_${account.userId.slice(0, 6)}`);
+            const preferredProviderUsername =
+              typeof authUser?.username === "string"
+                ? authUser.username.trim()
+                : "";
 
-            const username = await pickUniqueUsername(displayBase);
+            const username = await pickUniqueUsername(
+              preferredProviderUsername || createRandomUsername()
+            );
 
             const ensureStripeCustomer = async (userRecord: {
               id: string;
@@ -267,12 +312,12 @@ export const createAuth = (env: AuthEnv) => {
                   byExt.discordId !== account.accountId ||
                   (authUser?.email && !byExt.email) ||
                   (authUser?.locale && !byExt.timezone) ||
-                  byExt.username !== username;
+                  !byExt.username;
                 if (needsUpdate) {
                   target = await prisma.users.update({
                     where: { id: byExt.id },
                     data: {
-                      username,
+                      ...(byExt.username ? {} : { username }),
                       discordId: account.accountId,
                       email: byExt.email ?? authUser?.email ?? null,
                       timezone: byExt.timezone ?? authUser?.locale ?? null,
@@ -292,7 +337,7 @@ export const createAuth = (env: AuthEnv) => {
                 const updated = await prisma.users.update({
                   where: { id: byDiscord.id },
                   data: {
-                    username,
+                    ...(byDiscord.username ? {} : { username }),
                     extId: account.userId,
                     email: byDiscord.email ?? authUser?.email ?? null,
                     timezone: authUser?.locale ?? byDiscord.timezone ?? null,
@@ -312,7 +357,7 @@ export const createAuth = (env: AuthEnv) => {
                   const updated = await prisma.users.update({
                     where: { id: byEmail.id },
                     data: {
-                      username,
+                      ...(byEmail.username ? {} : { username }),
                       extId: account.userId,
                       discordId: account.accountId,
                       timezone: authUser?.locale ?? byEmail.timezone ?? null,
@@ -343,21 +388,30 @@ export const createAuth = (env: AuthEnv) => {
                     "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
                   );
                 }
-
-                // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
-                // We intentionally suppress the lint rules for this line only.
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              } catch (e: any) {
+              } catch (error) {
+                const prismaError = error as {
+                  code?: string;
+                  meta?: { target?: string | string[] };
+                };
+                const targets = prismaError.meta?.target;
+                const targetList = Array.isArray(targets)
+                  ? targets
+                  : targets
+                  ? [targets]
+                  : [];
                 // Convert unique collisions into claims (handles races / parallel requests)
                 if (
-                  e.code === "P2002" &&
-                  e.meta?.target?.includes("email") &&
+                  prismaError.code === "P2002" &&
+                  targetList.includes("email") &&
                   authUser?.email
                 ) {
+                  const existing = await prisma.users
+                    .findUnique({ where: { email: authUser.email } })
+                    .catch(() => null);
                   const updated = await prisma.users.update({
                     where: { email: authUser.email },
                     data: {
-                      username,
+                      ...(existing?.username ? {} : { username }),
                       extId: account.userId,
                       discordId: account.accountId,
                       timezone: authUser?.locale ?? null,
@@ -367,13 +421,16 @@ export const createAuth = (env: AuthEnv) => {
                   return;
                 }
                 if (
-                  e.code === "P2002" &&
-                  e.meta?.target?.includes("discordId")
+                  prismaError.code === "P2002" &&
+                  targetList.includes("discordId")
                 ) {
+                  const existing = await prisma.users
+                    .findUnique({ where: { discordId: account.accountId } })
+                    .catch(() => null);
                   const updated = await prisma.users.update({
                     where: { discordId: account.accountId },
                     data: {
-                      username,
+                      ...(existing?.username ? {} : { username }),
                       extId: account.userId,
                       email: authUser?.email ?? undefined,
                       timezone: authUser?.locale ?? null,
@@ -382,7 +439,7 @@ export const createAuth = (env: AuthEnv) => {
                   await ensureStripeCustomer(updated);
                   return;
                 }
-                throw e;
+                throw error;
               }
             }
 
@@ -397,12 +454,12 @@ export const createAuth = (env: AuthEnv) => {
                   byExt.kickId !== account.accountId ||
                   (authUser?.email && !byExt.email) ||
                   (authUser?.locale && !byExt.timezone) ||
-                  byExt.username !== username;
+                  !byExt.username;
                 if (needsUpdate) {
                   target = await prisma.users.update({
                     where: { id: byExt.id },
                     data: {
-                      username,
+                      ...(byExt.username ? {} : { username }),
                       kickId: account.accountId,
                       email: byExt.email ?? authUser?.email ?? null,
                       timezone: byExt.timezone ?? authUser?.locale ?? null,
@@ -422,7 +479,7 @@ export const createAuth = (env: AuthEnv) => {
                 const updated = await prisma.users.update({
                   where: { id: byKick.id },
                   data: {
-                    username,
+                    ...(byKick.username ? {} : { username }),
                     extId: account.userId,
                     email: byKick.email ?? authUser?.email ?? null,
                     timezone: authUser?.locale ?? byKick.timezone ?? null,
@@ -442,7 +499,7 @@ export const createAuth = (env: AuthEnv) => {
                   const updated = await prisma.users.update({
                     where: { id: byEmail.id },
                     data: {
-                      username,
+                      ...(byEmail.username ? {} : { username }),
                       extId: account.userId,
                       kickId: account.accountId,
                       timezone: authUser?.locale ?? byEmail.timezone ?? null,
@@ -473,19 +530,29 @@ export const createAuth = (env: AuthEnv) => {
                     "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
                   );
                 }
-
-                // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              } catch (e: any) {
+              } catch (error) {
+                const prismaError = error as {
+                  code?: string;
+                  meta?: { target?: string | string[] };
+                };
+                const targets = prismaError.meta?.target;
+                const targetList = Array.isArray(targets)
+                  ? targets
+                  : targets
+                  ? [targets]
+                  : [];
                 if (
-                  e.code === "P2002" &&
-                  e.meta?.target?.includes("email") &&
+                  prismaError.code === "P2002" &&
+                  targetList.includes("email") &&
                   authUser?.email
                 ) {
+                  const existing = await prisma.users
+                    .findUnique({ where: { email: authUser.email } })
+                    .catch(() => null);
                   const updated = await prisma.users.update({
                     where: { email: authUser.email },
                     data: {
-                      username,
+                      ...(existing?.username ? {} : { username }),
                       extId: account.userId,
                       kickId: account.accountId,
                       timezone: authUser?.locale ?? null,
@@ -494,11 +561,17 @@ export const createAuth = (env: AuthEnv) => {
                   await ensureStripeCustomer(updated);
                   return;
                 }
-                if (e.code === "P2002" && e.meta?.target?.includes("kickId")) {
+                if (
+                  prismaError.code === "P2002" &&
+                  targetList.includes("kickId")
+                ) {
+                  const existing = await prisma.users
+                    .findUnique({ where: { kickId: account.accountId } })
+                    .catch(() => null);
                   const updated = await prisma.users.update({
                     where: { kickId: account.accountId },
                     data: {
-                      username,
+                      ...(existing?.username ? {} : { username }),
                       extId: account.userId,
                       email: authUser?.email ?? undefined,
                       timezone: authUser?.locale ?? null,
@@ -507,7 +580,7 @@ export const createAuth = (env: AuthEnv) => {
                   await ensureStripeCustomer(updated);
                   return;
                 }
-                throw e;
+                throw error;
               }
             }
           },

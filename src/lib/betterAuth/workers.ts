@@ -5,10 +5,11 @@ import { ContextWithSuperJSON } from "jstack";
 
 let _auth: ReturnType<typeof createAuth> | undefined;
 
-// NOTE: jstack currently emits the generic signature <Env, any, {}> which we cannot change here.
-// We intentionally suppress the lint rules for this line only.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type
-export const getWorkerAuth = (c: ContextWithSuperJSON<Env, any, {}>) => {
+type WorkerVariables = Record<string, unknown>;
+
+export const getWorkerAuth = (
+  c: ContextWithSuperJSON<Env, WorkerVariables, Record<string, never>>
+) => {
   if (!_auth) {
     const e = env(c);
 

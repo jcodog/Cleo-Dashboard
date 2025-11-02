@@ -4,81 +4,25 @@ import DiscordAuthButton from "@/components/auth/DiscordAuthButton";
 import KickAuthButton from "@/components/auth/KickAuthButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { client } from "@/lib/client";
-import { authClient } from "@/lib/authClient";
-import { useQuery } from "@tanstack/react-query";
+import { PROVIDER_PATH, useLinkedAccounts } from "@/hooks/useLinkedAccounts";
 import { CheckCircle2, CircleOff, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
-import { toast } from "sonner";
-
-const PROVIDER_PATH: Record<"discord" | "kick", string> = {
-  discord: "/dashboard/d",
-  kick: "/dashboard/k",
-};
+import { useMemo } from "react";
 
 export const LinkedAccountsSection = () => {
-  const [linkingProvider, setLinkingProvider] = useState<
-    "discord" | "kick" | null
-  >(null);
-
-  const accountsQuery = useQuery({
-    queryKey: ["linked-accounts"],
-    queryFn: async () => {
-      const res = await client.accounts.linkedProviders.$get();
-      if (!res.ok) {
-        throw new Error("Failed to load linked accounts");
-      }
-      return res.json() as Promise<{
-        user: {
-          username: string | null;
-          email: string | null;
-        };
-        providers: {
-          discord: { linked: boolean; accountId: string | null };
-          kick: { linked: boolean; accountId: string | null };
-        };
-      }>;
-    },
-  });
+  const {
+    query: accountsQuery,
+    handleLink,
+    linkingProvider,
+    handleUnlink,
+    unlinkingProvider,
+    linkedCount,
+  } = useLinkedAccounts();
 
   const data = accountsQuery.data;
 
   const hasDiscord = data?.providers.discord.linked ?? false;
   const hasKick = data?.providers.kick.linked ?? false;
-
-  const handleLink = useCallback(
-    async (provider: "discord" | "kick") => {
-      if (linkingProvider) return;
-      setLinkingProvider(provider);
-      let timeout: ReturnType<typeof setTimeout> | undefined;
-      try {
-        timeout = setTimeout(() => {
-          setLinkingProvider(null);
-          toast.error(
-            "Taking longer than expected. Please complete the linking window."
-          );
-        }, 6000);
-        await authClient.linkSocial({ provider });
-        setTimeout(() => {
-          accountsQuery.refetch();
-          setLinkingProvider(null);
-        }, 3500);
-      } catch (error) {
-        setLinkingProvider(null);
-        const message =
-          error instanceof Error && error.message
-            ? error.message
-            : "Unable to start linking flow";
-        toast.error(message);
-      } finally {
-        if (timeout) {
-          clearTimeout(timeout);
-        }
-      }
-    },
-    [accountsQuery, linkingProvider]
-  );
 
   const cards = useMemo(
     () => [
@@ -170,10 +114,14 @@ export const LinkedAccountsSection = () => {
               </p>
             </div>
             <Badge
-              variant={card.linked ? "secondary" : "outline"}
+              variant={card.linked ? "glass" : "glass-muted"}
               className="gap-1"
             >
-              {accountsQuery.isFetching && card.provider === linkingProvider ? (
+              {unlinkingProvider === card.provider ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : accountsQuery.isFetching &&
+                (card.provider === linkingProvider ||
+                  card.provider === unlinkingProvider) ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
               ) : card.linked ? (
                 <CheckCircle2 className="h-3 w-3" />
@@ -196,7 +144,7 @@ export const LinkedAccountsSection = () => {
 
           {card.linked ? (
             <div className="mt-auto flex flex-col gap-2 sm:flex-row">
-              <Button asChild variant="gradient" className="w-full sm:w-auto">
+              <Button asChild variant="glass" className="w-full sm:w-auto">
                 <Link
                   href={PROVIDER_PATH[card.provider]}
                   className="inline-flex items-center gap-2"
@@ -206,12 +154,27 @@ export const LinkedAccountsSection = () => {
                 </Link>
               </Button>
               <Button
-                variant="outline"
+                variant="glass-muted"
                 className="w-full sm:w-auto"
                 onClick={() => handleLink(card.provider)}
                 disabled={linkingProvider === card.provider}
               >
                 {linkingProvider === card.provider ? "Relinking..." : "Relink"}
+              </Button>
+              <Button
+                variant="glass-destructive"
+                className="w-full sm:w-auto"
+                onClick={() => handleUnlink(card.provider)}
+                disabled={
+                  unlinkingProvider === card.provider || linkedCount <= 1
+                }
+                title={
+                  linkedCount <= 1
+                    ? "Link another account before unlinking."
+                    : undefined
+                }
+              >
+                {unlinkingProvider === card.provider ? "Removing..." : "Unlink"}
               </Button>
             </div>
           ) : (

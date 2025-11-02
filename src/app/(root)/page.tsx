@@ -30,7 +30,7 @@ export default async function Home() {
           >
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70 backdrop-blur-md">
               <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-              Live for Discord
+              Working for Discord and Kick
             </div>
             <Heading className="inline-block! bg-linear-to-br from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-6xl font-extrabold tracking-tight text-transparent md:text-8xl lg:text-[9rem]">
               Cleo

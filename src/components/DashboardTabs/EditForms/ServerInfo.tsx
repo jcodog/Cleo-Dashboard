@@ -6,9 +6,7 @@ import { Input } from "@/components/ui/input";
 import { client } from "@/lib/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { APIGuild } from "discord-api-types/v10";
-import { useState } from "react";
-
-import { useEffect } from "react";
+import { startTransition, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
@@ -64,8 +62,10 @@ export const ServerInfo = ({ apiGuild, setDirtyAction }: ServerInfoProps) => {
   }, [data, error, queryClient, setDirtyAction]);
 
   useEffect(() => {
-    setName(apiGuild.name || "");
-    setDescription(apiGuild.description ?? "");
+    startTransition(() => {
+      setName(apiGuild.name || "");
+      setDescription(apiGuild.description ?? "");
+    });
   }, [apiGuild.name, apiGuild.description]);
 
   const isDisabled =

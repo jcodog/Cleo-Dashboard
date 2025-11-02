@@ -1,4 +1,5 @@
 import { authProcedure, j } from "@/server/jstack";
+import { z } from "zod";
 
 export const accountsRouter = j.router({
   linkedProviders: authProcedure.query(async ({ c, ctx }) => {
@@ -33,7 +34,9 @@ export const accountsRouter = j.router({
     const discordAccount = accounts.find(
       (account) => account.providerId === "discord"
     );
-    const kickAccount = accounts.find((account) => account.providerId === "kick");
+    const kickAccount = accounts.find(
+      (account) => account.providerId === "kick"
+    );
 
     const normalizeProvider = (
       account:
@@ -51,7 +54,8 @@ export const accountsRouter = j.router({
       expiresAt: account?.accessTokenExpiresAt
         ? account.accessTokenExpiresAt.toISOString()
         : null,
-      lastLinkedAt: (account?.updatedAt ?? account?.createdAt)?.toISOString() ?? null,
+      lastLinkedAt:
+        (account?.updatedAt ?? account?.createdAt)?.toISOString() ?? null,
     });
 
     return c.json({
@@ -74,4 +78,64 @@ export const accountsRouter = j.router({
       },
     });
   }),
+  unlinkProvider: authProcedure
+    .input(z.object({ provider: z.enum(["discord", "kick"]) }))
+    .mutation(async ({ c, ctx, input }) => {
+      const { db, session } = ctx;
+      const userId = session.user.id;
+      const provider = input.provider;
+
+      try {
+        const [accounts, targetAccount] = await Promise.all([
+          db.account.findMany({
+            where: { userId, providerId: { in: ["discord", "kick"] } },
+            select: { providerId: true },
+          }),
+          db.account.findFirst({
+            where: { userId, providerId: provider },
+            select: { accountId: true },
+          }),
+        ]);
+
+        if (!targetAccount) {
+          return c.json({
+            success: false,
+            error: "Provider not linked",
+          });
+        }
+
+        const linkedProviders = new Set(accounts.map((acc) => acc.providerId));
+
+        if (linkedProviders.size <= 1) {
+          return c.json({
+            success: false,
+            error: "You must keep at least one account linked.",
+          });
+        }
+
+        await db.account.deleteMany({
+          where: { userId, providerId: provider },
+        });
+
+        const updateData =
+          provider === "discord" ? { discordId: null } : { kickId: null };
+
+        await db.users.updateMany({
+          where:
+            provider === "discord"
+              ? { extId: userId, discordId: targetAccount.accountId }
+              : { extId: userId, kickId: targetAccount.accountId },
+          data: updateData,
+        });
+
+        return c.json({ success: true });
+      } catch (err: unknown) {
+        const message =
+          typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Failed to unlink account";
+        console.error("[accounts.unlinkProvider] error", err);
+        return c.json({ success: false, error: message });
+      }
+    }),
 });

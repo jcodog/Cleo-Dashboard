@@ -12,7 +12,7 @@ import { client } from "@/lib/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RESTGetAPIGuildChannelsResult } from "discord-api-types/v10";
 import { Pen, Save, Trash } from "lucide-react";
-import { useState, useEffect } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export const ChannelItem = ({
@@ -66,8 +66,11 @@ export const ChannelItem = ({
 
   // Sync local channel state when props change
   useEffect(() => {
-    setChannel({ name: channelName, id: channelId });
-  }, [channelName, channelId]);
+    if (editing) return;
+    startTransition(() => {
+      setChannel({ name: channelName, id: channelId });
+    });
+  }, [channelName, channelId, editing]);
 
   return (
     <li className="group grid grid-cols-[190px_1fr_auto] gap-4 items-center w-full rounded-lg border border-border/55 bg-card/60 backdrop-blur-sm px-4 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-colors hover:bg-card/70">

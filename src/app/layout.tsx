@@ -8,8 +8,8 @@ import { CookieBanner } from "@/components/CookieBanner";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PreReleaseBanner } from "../components/PreReleaseBanner";
-// Removed Clerk avatar sync. If future avatar sync is needed, implement via Better Auth + Discord tokens.
-import { Databuddy } from "@databuddy/sdk/react";
+// Temp: Remove databuddy until can figure out and fix the weird error about package sub dependencies
+// import { Databuddy } from "@databuddy/sdk/react";
 
 export const metadata: Metadata = {
   title: { default: "Cleo", template: "%s | Cleo" },
@@ -73,20 +73,23 @@ export default function RootLayout({
         >
           <JStackProvider>
             {children}
-            <Databuddy
+            {/* <Databuddy
               clientId="kYvU4Eddh8RzHScTlZ3Pj"
-              trackHashChanges={true}
-              trackAttributes={true}
-              trackOutgoingLinks={true}
-              trackInteractions={true}
-              trackEngagement={true}
-              trackScrollDepth={true}
-              trackExitIntent={true}
-              trackBounceRate={true}
+              trackScreenViews={true}
+              trackPerformance={true}
               trackWebVitals={true}
               trackErrors={true}
+              trackSessions={true}
+              trackOutgoingLinks={true}
+              trackScrollDepth={true}
+              trackEngagement={true}
               enableBatching={true}
-            />
+              trackBounceRate={true}
+              trackAttributes={true}
+              trackExitIntent={true}
+              trackHashChanges={true}
+              trackInteractions={true}
+            /> */}
             <Toaster
               richColors
               position="top-right"
