@@ -125,7 +125,7 @@ interface StatCardProps {
 }
 const StatCard = ({ icon: Icon, label, value }: StatCardProps) => (
   <div
-    className="group relative flex w-full flex-col gap-2 rounded-md border border-border/50 bg-gradient-to-b from-card/75 via-card/60 to-card/50 p-3 md:p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_1px_2px_-1px_rgba(0,0,0,0.4),0_2px_8px_-4px_rgba(0,0,0,0.45)] backdrop-blur-sm overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-0 transition-colors"
+    className="group relative flex w-full flex-col gap-2 rounded-md border border-border/50 bg-linear-to-b from-card/75 via-card/60 to-card/50 p-3 md:p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_1px_2px_-1px_rgba(0,0,0,0.4),0_2px_8px_-4px_rgba(0,0,0,0.45)] backdrop-blur-sm overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-0 transition-colors"
     tabIndex={0}
   >
     <div className="flex items-center gap-2 text-[11px] font-medium tracking-wide text-muted-foreground">

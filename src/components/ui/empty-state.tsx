@@ -19,13 +19,13 @@ export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const variantStyles: Record<EmptyVariant, string> = {
   default:
-    "bg-gradient-to-br from-accent/50 to-accent/20 dark:from-accent/30 dark:to-accent/10 border-border/60",
+    "bg-linear-to-br from-accent/50 to-accent/20 dark:from-accent/30 dark:to-accent/10 border-border/60",
   subtle: "bg-card/40 border-border/40",
   danger:
-    "bg-gradient-to-br from-destructive/25 to-destructive/5 border-destructive/40 text-destructive dark:from-destructive/20 dark:to-destructive/10",
-  info: "bg-gradient-to-br from-chart-2/30 to-chart-3/15 border-chart-2/40",
+    "bg-linear-to-br from-destructive/25 to-destructive/5 border-destructive/40 text-destructive dark:from-destructive/20 dark:to-destructive/10",
+  info: "bg-linear-to-br from-chart-2/30 to-chart-3/15 border-chart-2/40",
   success:
-    "bg-gradient-to-br from-chart-5/30 to-chart-1/10 border-chart-5/40 dark:from-chart-5/20 dark:to-chart-1/10",
+    "bg-linear-to-br from-chart-5/30 to-chart-1/10 border-chart-5/40 dark:from-chart-5/20 dark:to-chart-1/10",
 };
 
 const sizeStyles: Record<
