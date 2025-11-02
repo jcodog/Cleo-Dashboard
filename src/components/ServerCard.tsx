@@ -27,7 +27,7 @@ export const ServerCard = ({
       <Link
         href={`/dashboard/d/guild/${serverId}`}
         className={cn(
-          "flex md:hidden group relative w-auto aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0 transition-transform hover:-translate-y-0.5 before:content-[''] before:absolute before:inset-0 before:rounded-[inherit] before:pointer-events-none before:z-[6] before:bg-[radial-gradient(120%_120%_at_10%_0%,rgba(255,255,255,0.15),transparent_60%)] before:opacity-60 before:transition-opacity before:duration-300 group-hover:before:opacity-80 before:backdrop-blur-[1.5px]",
+          "flex md:hidden group relative w-auto aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0 transition-transform hover:-translate-y-0.5 before:content-[''] before:absolute before:inset-0 before:rounded-[inherit] before:pointer-events-none before:z-6 before:bg-[radial-gradient(120%_120%_at_10%_0%,rgba(255,255,255,0.15),transparent_60%)] before:opacity-60 before:transition-opacity before:duration-300 group-hover:before:opacity-80 before:backdrop-blur-[1.5px]",
           isRecent &&
             "ring-2 ring-indigo-400/35 dark:ring-indigo-300/30 ring-offset-2 ring-offset-background shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_0_0_1px_rgba(99,102,241,0.10)] after:content-[''] after:absolute after:inset-0 after:rounded-[inherit] after:pointer-events-none after:bg-[linear-gradient(180deg,rgba(99,102,241,0.28),rgba(168,85,247,0.15)_40%,transparent_100%)] after:opacity-60 after:transition-opacity after:duration-300 group-hover:after:opacity-80"
         )}
@@ -53,7 +53,7 @@ export const ServerCard = ({
       <Link
         href={`/dashboard/guild/${serverId}`}
         className={cn(
-          "hidden md:flex group relative w-full aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0 transition-transform hover:-translate-y-0.5 before:content-[''] before:absolute before:inset-0 before:rounded-[inherit] before:pointer-events-none before:z-[6] before:bg-[radial-gradient(120%_120%_at_10%_0%,rgba(255,255,255,0.15),transparent_60%)] before:opacity-50 before:transition-opacity before:duration-300 group-hover:before:opacity-80 before:backdrop-blur-[1.5px]",
+          "hidden md:flex group relative w-full aspect-square h-auto overflow-hidden bg-accent/20 shadow-lg rounded-lg cursor-pointer z-0 transition-transform hover:-translate-y-0.5 before:content-[''] before:absolute before:inset-0 before:rounded-[inherit] before:pointer-events-none before:z-6 before:bg-[radial-gradient(120%_120%_at_10%_0%,rgba(255,255,255,0.15),transparent_60%)] before:opacity-50 before:transition-opacity before:duration-300 group-hover:before:opacity-80 before:backdrop-blur-[1.5px]",
           isRecent &&
             "ring-2 ring-indigo-400/35 dark:ring-indigo-300/30 ring-offset-2 ring-offset-background shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_0_0_1px_rgba(99,102,241,0.10)] after:content-[''] after:absolute after:inset-0 after:rounded-[inherit] after:pointer-events-none after:bg-[linear-gradient(180deg,rgba(99,102,241,0.28),rgba(168,85,247,0.15)_40%,transparent_100%)] after:opacity-60 after:transition-opacity after:duration-300 group-hover:after:opacity-80"
         )}

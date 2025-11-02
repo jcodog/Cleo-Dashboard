@@ -1,5 +1,5 @@
 procs:
   cleo_dash-front:
-    shell: "pnpm dev"
+    shell: "bun run dev"
   cleo_dash-back:
-    shell: "pnpm wrangler dev"
+    shell: "bunx wrangler dev"
