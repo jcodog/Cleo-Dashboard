@@ -388,30 +388,20 @@ export const createAuth = (env: AuthEnv) => {
                     "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
                   );
                 }
-              } catch (error) {
-                const prismaError = error as {
-                  code?: string;
-                  meta?: { target?: string | string[] };
-                };
-                const targets = prismaError.meta?.target;
-                const targetList = Array.isArray(targets)
-                  ? targets
-                  : targets
-                  ? [targets]
-                  : [];
+                // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
+                // We intentionally suppress the lint rules for this line only.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } catch (e: any) {
                 // Convert unique collisions into claims (handles races / parallel requests)
                 if (
-                  prismaError.code === "P2002" &&
-                  targetList.includes("email") &&
+                  e.code === "P2002" &&
+                  e.meta?.target?.includes("email") &&
                   authUser?.email
                 ) {
-                  const existing = await prisma.users
-                    .findUnique({ where: { email: authUser.email } })
-                    .catch(() => null);
                   const updated = await prisma.users.update({
                     where: { email: authUser.email },
                     data: {
-                      ...(existing?.username ? {} : { username }),
+                      username,
                       extId: account.userId,
                       discordId: account.accountId,
                       timezone: authUser?.locale ?? null,
@@ -421,16 +411,13 @@ export const createAuth = (env: AuthEnv) => {
                   return;
                 }
                 if (
-                  prismaError.code === "P2002" &&
-                  targetList.includes("discordId")
+                  e.code === "P2002" &&
+                  e.meta?.target?.includes("discordId")
                 ) {
-                  const existing = await prisma.users
-                    .findUnique({ where: { discordId: account.accountId } })
-                    .catch(() => null);
                   const updated = await prisma.users.update({
                     where: { discordId: account.accountId },
                     data: {
-                      ...(existing?.username ? {} : { username }),
+                      username,
                       extId: account.userId,
                       email: authUser?.email ?? undefined,
                       timezone: authUser?.locale ?? null,
@@ -439,7 +426,7 @@ export const createAuth = (env: AuthEnv) => {
                   await ensureStripeCustomer(updated);
                   return;
                 }
-                throw error;
+                throw e;
               }
             }
 
@@ -530,29 +517,19 @@ export const createAuth = (env: AuthEnv) => {
                     "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
                   );
                 }
-              } catch (error) {
-                const prismaError = error as {
-                  code?: string;
-                  meta?: { target?: string | string[] };
-                };
-                const targets = prismaError.meta?.target;
-                const targetList = Array.isArray(targets)
-                  ? targets
-                  : targets
-                  ? [targets]
-                  : [];
+                // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
+                // We intentionally suppress the lint rules for this line only.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } catch (e: any) {
                 if (
-                  prismaError.code === "P2002" &&
-                  targetList.includes("email") &&
+                  e.code === "P2002" &&
+                  e.meta?.target?.includes("email") &&
                   authUser?.email
                 ) {
-                  const existing = await prisma.users
-                    .findUnique({ where: { email: authUser.email } })
-                    .catch(() => null);
                   const updated = await prisma.users.update({
                     where: { email: authUser.email },
                     data: {
-                      ...(existing?.username ? {} : { username }),
+                      username,
                       extId: account.userId,
                       kickId: account.accountId,
                       timezone: authUser?.locale ?? null,
@@ -561,17 +538,11 @@ export const createAuth = (env: AuthEnv) => {
                   await ensureStripeCustomer(updated);
                   return;
                 }
-                if (
-                  prismaError.code === "P2002" &&
-                  targetList.includes("kickId")
-                ) {
-                  const existing = await prisma.users
-                    .findUnique({ where: { kickId: account.accountId } })
-                    .catch(() => null);
+                if (e.code === "P2002" && e.meta?.target?.includes("kickId")) {
                   const updated = await prisma.users.update({
                     where: { kickId: account.accountId },
                     data: {
-                      ...(existing?.username ? {} : { username }),
+                      username,
                       extId: account.userId,
                       email: authUser?.email ?? undefined,
                       timezone: authUser?.locale ?? null,
@@ -580,7 +551,7 @@ export const createAuth = (env: AuthEnv) => {
                   await ensureStripeCustomer(updated);
                   return;
                 }
-                throw error;
+                throw e;
               }
             }
           },
