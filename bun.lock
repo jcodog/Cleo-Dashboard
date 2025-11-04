@@ -62,7 +62,13 @@
   },
   "trustedDependencies": [
     "@vercel/speed-insights",
+    "esbuild",
+    "@prisma/engines",
+    "sharp",
+    "@prisma/client",
     "unrs-resolver",
+    "prisma",
+    "workerd",
   ],
   "overrides": {
     "@types/react": "19.2.2",

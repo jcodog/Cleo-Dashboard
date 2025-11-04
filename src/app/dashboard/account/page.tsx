@@ -26,6 +26,7 @@ import {
   LogOut,
   RefreshCw,
   Trash2,
+  TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -219,7 +220,7 @@ export default function DashboardAccountPage() {
             <div className="md:col-span-2 min-h-0">
               <ScrollArea className="h-full min-h-0 overflow-x-hidden md:pr-4">
                 <div className="space-y-6">
-                  <div className="rounded-lg border bg-card p-5 shadow-sm flex flex-col gap-5">
+                  <div className="flex flex-col gap-5 rounded-2xl border border-border/55 bg-card/80 p-6 shadow-[0_16px_48px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl supports-backdrop-filter:bg-card/65 transition-colors">
                     <div className="flex items-center gap-5">
                       {profileLoading && !profile ? (
                         profileSectionSkeleton
@@ -437,7 +438,7 @@ export default function DashboardAccountPage() {
                       </Button>
                     </div>
 
-                    <div className="rounded-md border bg-muted/30 p-4 text-xs leading-relaxed space-y-2">
+                    <div className="space-y-2 rounded-xl border border-border/40 bg-background/40 p-4 backdrop-blur-sm text-xs leading-relaxed">
                       <div className="font-medium text-muted-foreground uppercase tracking-wide text-[10px]">
                         Session
                       </div>
@@ -466,7 +467,7 @@ export default function DashboardAccountPage() {
                     </div>
                   </div>
 
-                  <section className="rounded-lg border bg-card p-5 shadow-sm space-y-4">
+                  <section className="space-y-4 rounded-2xl border border-border/55 bg-card/78 p-6 shadow-[0_16px_48px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl supports-backdrop-filter:bg-card/62 transition-colors">
                     <div className="flex flex-col gap-1">
                       <h2 className="text-sm font-medium tracking-wide uppercase text-muted-foreground">
                         Linked Accounts
@@ -481,7 +482,7 @@ export default function DashboardAccountPage() {
                         {Array.from({ length: 2 }).map((_, index) => (
                           <div
                             key={index}
-                            className="h-28 rounded-xl border border-border/50 bg-card/60 backdrop-blur animate-pulse"
+                            className="h-28 rounded-xl border border-border/50 bg-card/65 backdrop-blur animate-pulse"
                           />
                         ))}
                       </div>
@@ -518,6 +519,10 @@ export default function DashboardAccountPage() {
                               (!normalizedUsername ||
                                 normalizedAccountId !== normalizedUsername)
                           );
+                          const grantedScopes = status.grantedScopes;
+                          const missingScopes = status.missingScopes;
+                          const grantedText = grantedScopes.join(", ");
+                          const missingText = missingScopes.join(", ");
                           const displayLabel =
                             displayName ?? accountUsername ?? accountId ?? "—";
                           const unlinkDisabled =
@@ -528,7 +533,7 @@ export default function DashboardAccountPage() {
                           return (
                             <div
                               key={provider}
-                              className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/70 p-4 backdrop-blur"
+                              className="flex flex-col gap-3 rounded-2xl border border-border/50 bg-card/70 p-5 backdrop-blur-lg shadow-[0_12px_44px_-24px_rgba(0,0,0,0.65)] transition-colors"
                             >
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="min-w-0 space-y-1">
@@ -576,6 +581,24 @@ export default function DashboardAccountPage() {
                                         ID: {accountId}
                                       </p>
                                     ) : null}
+                                    <div className="pt-1 space-y-1">
+                                      <p>
+                                        Approved scopes:{" "}
+                                        {grantedScopes.length
+                                          ? grantedText
+                                          : "None"}
+                                      </p>
+                                      {missingScopes.length ? (
+                                        <p className="flex items-center gap-1 text-amber-300">
+                                          <TriangleAlert className="h-3.5 w-3.5" />
+                                          Missing scopes: {missingText}
+                                        </p>
+                                      ) : (
+                                        <p className="text-emerald-400/80">
+                                          All required permissions granted.
+                                        </p>
+                                      )}
+                                    </div>
                                   </>
                                 ) : (
                                   <p>

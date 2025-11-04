@@ -2,216 +2,15 @@ import { authProcedure, j } from "@/server/jstack";
 import { env } from "hono/adapter";
 import { z } from "zod";
 import { getDiscordAccessToken } from "@/lib/betterAuth/discordToken";
+import { getKickAccessToken } from "@/lib/betterAuth/kickToken";
+import { getCachedProviderDisplayName } from "@/lib/functions/account-router/displayName";
+import { fetchKickIdentity } from "@/lib/functions/account-router/kick";
+import {
+  REQUIRED_PROVIDER_SCOPES,
+  parseScopes,
+  type ProviderKey,
+} from "@/lib/functions/account-router/scopes";
 import type { KVNamespace } from "@cloudflare/workers-types";
-
-const REQUIRED_PROVIDER_SCOPES = {
-  discord: [
-    "identify",
-    "email",
-    "guilds",
-    "connections",
-    "guilds.members.read",
-  ],
-  kick: [
-    "user:read",
-    "channel:read",
-    "channel:write",
-    "chat:write",
-    "streamkey:read",
-    "events:subscribe",
-    "moderation:ban",
-  ],
-} as const;
-
-type ProviderKey = keyof typeof REQUIRED_PROVIDER_SCOPES;
-
-const parseScopes = (scope?: string | null) =>
-  scope
-    ? scope
-        .split(/[\,\s]+/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : [];
-
-const PROVIDER_NAME_CACHE_TTL = 60 * 60 * 6; // 6 hours
-
-type ProviderDisplayNameLoader = () => Promise<string | null>;
-
-async function getCachedProviderDisplayName(opts: {
-  kv?: KVNamespace;
-  provider: ProviderKey;
-  accountId: string;
-  loader: ProviderDisplayNameLoader;
-  ttl?: number;
-}) {
-  const {
-    kv,
-    provider,
-    accountId,
-    loader,
-    ttl = PROVIDER_NAME_CACHE_TTL,
-  } = opts;
-
-  if (!accountId) {
-    return null;
-  }
-
-  const cacheKey = `provider-display:${provider}:${accountId}`;
-
-  if (kv) {
-    try {
-      const cached = await kv.get(cacheKey);
-      if (cached) {
-        return cached;
-      }
-    } catch (error) {
-      console.warn("[accounts.linkedProviders] kv get failed", {
-        cacheKey,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  const fresh = await loader();
-
-  if (fresh && kv) {
-    try {
-      await kv.put(cacheKey, fresh, { expirationTtl: ttl });
-    } catch (error) {
-      console.warn("[accounts.linkedProviders] kv put failed", {
-        cacheKey,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  return fresh;
-}
-
-const pickString = (...values: unknown[]): string | null => {
-  for (const value of values) {
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return String(value);
-    }
-  }
-  return null;
-};
-
-type KickIdentity = {
-  username: string | null;
-  displayName: string | null;
-};
-
-const extractKickIdentity = (payload: unknown): KickIdentity => {
-  if (!payload || typeof payload !== "object") {
-    return { username: null, displayName: null };
-  }
-
-  const root = payload as Record<string, unknown>;
-  const channel =
-    typeof root.channel === "object" && root.channel
-      ? (root.channel as Record<string, unknown>)
-      : null;
-  const user =
-    typeof root.user === "object" && root.user
-      ? (root.user as Record<string, unknown>)
-      : null;
-  const nestedUser =
-    channel && typeof channel.user === "object" && channel.user
-      ? (channel.user as Record<string, unknown>)
-      : null;
-
-  const username = pickString(
-    root.slug,
-    root.username,
-    root.user_name,
-    channel?.slug,
-    channel?.username,
-    user?.slug,
-    user?.username,
-    nestedUser?.slug,
-    nestedUser?.username
-  );
-
-  const displayName =
-    pickString(
-      root.display_name,
-      root.displayName,
-      user?.display_name,
-      user?.displayName,
-      nestedUser?.display_name,
-      nestedUser?.displayName
-    ) ?? username;
-
-  return {
-    username: username ? username.toLowerCase() : null,
-    displayName,
-  };
-};
-
-async function fetchKickIdentity(candidate: string): Promise<KickIdentity> {
-  const slug = candidate.trim().toLowerCase();
-  if (!slug) {
-    return { username: null, displayName: null };
-  }
-
-  const attempt = async (url: string): Promise<KickIdentity | null> => {
-    try {
-      const response = await fetch(url, {
-        headers: { Accept: "application/json", Authentication: `Bearer` },
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-
-        const body = await response.text().catch(() => "<failed to read body>");
-        console.warn("[accounts.linkedProviders] kick profile request failed", {
-          url,
-          status: response.status,
-          body: body?.slice(0, 150),
-        });
-        return null;
-      }
-
-      const payload = (await response.json()) as unknown;
-      const identity = extractKickIdentity(payload);
-      if (identity.username || identity.displayName) {
-        return identity;
-      }
-      return null;
-    } catch (error) {
-      console.warn("[accounts.linkedProviders] kick profile request error", {
-        url,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
-  };
-
-  const endpoints = [
-    `https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`,
-  ];
-
-  if (/^\d+$/.test(slug)) {
-    endpoints.push(
-      `https://api.kick.com/public/v1/users?id=1234${encodeURIComponent(slug)}`
-    );
-  }
-
-  for (const url of endpoints) {
-    const identity = await attempt(url);
-    if (identity) {
-      return identity;
-    }
-  }
-
-  return { username: null, displayName: null };
-}
 
 export const accountsRouter = j.router({
   linkedProviders: authProcedure.query(async ({ c, ctx }) => {
@@ -276,7 +75,12 @@ export const accountsRouter = j.router({
       kick: null,
     };
 
-    const { DISCORD_CLIENT_ID = "", DISCORD_CLIENT_SECRET = "" } = env(c);
+    const {
+      DISCORD_CLIENT_ID = "",
+      DISCORD_CLIENT_SECRET = "",
+      KICK_CLIENT_ID = "",
+      KICK_CLIENT_SECRET = "",
+    } = env(c);
 
     if (discordAccount?.accountId) {
       providerDisplayNames.discord = await getCachedProviderDisplayName({
@@ -361,42 +165,106 @@ export const accountsRouter = j.router({
       });
     }
 
-    const kickCacheKey = domainUser?.kickUsername ?? kickAccount?.accountId;
+    const kickCacheKey =
+      domainUser?.kickUsername ??
+      domainUser?.kickId ??
+      kickAccount?.accountId ??
+      null;
 
-    if (kickCacheKey) {
+    if (kickCacheKey && kickAccount?.accountId) {
       providerDisplayNames.kick = await getCachedProviderDisplayName({
         kv,
         provider: "kick",
         accountId: kickCacheKey,
         loader: async () => {
+          if (!KICK_CLIENT_ID || !KICK_CLIENT_SECRET) {
+            return null;
+          }
+
+          let token: string | null = null;
+
+          try {
+            token = await getKickAccessToken({
+              db,
+              userId,
+              clientId: KICK_CLIENT_ID,
+              clientSecret: KICK_CLIENT_SECRET,
+            });
+          } catch (error) {
+            console.warn(
+              "[accounts.linkedProviders] failed to resolve kick token",
+              {
+                userId,
+                error: error instanceof Error ? error.message : String(error),
+              }
+            );
+            return null;
+          }
+
+          if (!token) {
+            return null;
+          }
+
           const candidates = Array.from(
             new Set(
               [
                 domainUser?.kickUsername,
-                kickAccount?.accountId,
+                domainUser?.kickId,
+                kickAccount.accountId,
                 fallbackDisplayNames.kick,
-              ].filter((value): value is string => Boolean(value))
+              ]
+                .filter((value): value is string => Boolean(value))
+                .map((value) => value.trim())
+                .filter(Boolean)
             )
           );
 
           for (const candidate of candidates) {
-            const identity = await fetchKickIdentity(candidate);
+            const identity = await fetchKickIdentity({
+              candidate,
+              token,
+            });
+
             if (!identity.username && !identity.displayName) {
               continue;
             }
 
-            if (identity.username && domainUser?.id) {
-              const normalizedUsername = identity.username;
-              if (domainUser.kickUsername !== normalizedUsername) {
+            if (domainUser?.id) {
+              if (
+                identity.username &&
+                domainUser.kickUsername !== identity.username
+              ) {
                 try {
                   await db.users.update({
                     where: { id: domainUser.id },
-                    data: { kickUsername: normalizedUsername },
+                    data: { kickUsername: identity.username },
                   });
-                  domainUser.kickUsername = normalizedUsername;
+                  domainUser.kickUsername = identity.username;
                 } catch (error) {
                   console.warn(
                     "[accounts.linkedProviders] failed to persist kick username",
+                    {
+                      userId,
+                      error:
+                        error instanceof Error ? error.message : String(error),
+                    }
+                  );
+                }
+              }
+
+              if (
+                identity.userId !== null &&
+                domainUser.kickId !== String(identity.userId)
+              ) {
+                try {
+                  await db.users.update({
+                    where: { id: domainUser.id },
+                    data: { kickId: String(identity.userId) },
+                  });
+                  domainUser.kickId = String(identity.userId);
+                } catch (error) {
+                  console.warn(
+                    "[accounts.linkedProviders] failed to persist kick id",
                     {
                       userId,
                       error:

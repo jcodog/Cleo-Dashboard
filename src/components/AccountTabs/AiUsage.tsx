@@ -91,7 +91,7 @@ export const AiUsage = () => {
   const isNearLimit = useMemo(() => ratio < 0.2, [ratio]);
 
   return (
-    <div className="p-4 border border-border/60 bg-muted/20 rounded-lg space-y-4">
+    <div className="space-y-4 rounded-2xl border border-border/60 bg-card/75 p-5 backdrop-blur-xl shadow-[0_12px_48px_-20px_rgba(0,0,0,0.6),0_4px_12px_-8px_rgba(255,255,255,0.08)] transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold leading-none">AI Usage</h3>
@@ -115,7 +115,7 @@ export const AiUsage = () => {
         <div className="space-y-3">
           <div className="h-4 w-24 bg-muted rounded animate-pulse" />
           <div className="h-4 w-full bg-muted rounded overflow-hidden">
-            <div className="h-full w-1/2 bg-muted-foreground/20 animate-pulse" />
+            <div className="h-full w-1/2 bg-muted-foreground/25 animate-pulse" />
           </div>
           <div className="flex items-center justify-between">
             <div className="h-4 w-40 bg-muted rounded animate-pulse" />
@@ -176,7 +176,7 @@ export const AiUsage = () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <div className="flex flex-col gap-3 rounded-md border border-border/50 bg-background/40 p-3">
+          <div className="flex flex-col gap-3 rounded-xl border border-border/50 bg-background/45 p-3 backdrop-blur-sm">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Additional

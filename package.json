@@ -72,7 +72,13 @@
     "@types/react-dom": "19.2.2"
   },
   "trustedDependencies": [
+    "@prisma/client",
+    "@prisma/engines",
     "@vercel/speed-insights",
-    "unrs-resolver"
+    "esbuild",
+    "prisma",
+    "sharp",
+    "unrs-resolver",
+    "workerd"
   ]
 }

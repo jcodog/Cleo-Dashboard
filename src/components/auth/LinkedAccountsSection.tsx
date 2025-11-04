@@ -213,16 +213,33 @@ export const LinkedAccountsSection = () => {
 const AccountStatusDetails = ({ status }: { status: ProviderStatus }) => {
   const granted = status.grantedScopes.join(", ");
   const missing = status.missingScopes.join(", ");
+  const normalizedDisplay = status.displayName?.trim().toLowerCase();
+  const normalizedUsername = status.username?.trim().toLowerCase();
+  const normalizedAccountId = status.accountId?.trim().toLowerCase();
+  const showUsername = Boolean(
+    status.username && normalizedUsername !== normalizedDisplay
+  );
+  const showAccountId = Boolean(
+    status.accountId && normalizedAccountId !== normalizedUsername
+  );
+  const resolvedName =
+    status.displayName ?? status.username ?? status.accountId ?? "Unknown user";
 
   return (
     <div className="flex flex-col gap-2 text-xs text-muted-foreground/80">
       <p>
         Signed in as{" "}
-        <span className="font-medium text-foreground">
-          {status.displayName ?? status.accountId ?? "Unknown user"}
-        </span>
+        <span className="font-medium text-foreground">{resolvedName}</span>
       </p>
-      <p>Granted scopes: {granted.length ? granted : "None"}</p>
+      {showUsername ? (
+        <p className="font-mono text-muted-foreground/90">@{status.username}</p>
+      ) : null}
+      {showAccountId ? (
+        <p className="font-mono text-muted-foreground/70">
+          ID: {status.accountId}
+        </p>
+      ) : null}
+      <p>Approved scopes: {granted.length ? granted : "None"}</p>
       {status.missingScopes.length > 0 ? (
         <p className="flex items-center gap-1 text-amber-400">
           <TriangleAlert className="h-3.5 w-3.5" />
