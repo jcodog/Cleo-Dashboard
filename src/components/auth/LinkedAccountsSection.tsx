@@ -4,8 +4,18 @@ import DiscordAuthButton from "@/components/auth/DiscordAuthButton";
 import KickAuthButton from "@/components/auth/KickAuthButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PROVIDER_PATH, useLinkedAccounts } from "@/hooks/useLinkedAccounts";
-import { CheckCircle2, CircleOff, ExternalLink, Loader2 } from "lucide-react";
+import {
+  PROVIDER_PATH,
+  ProviderStatus,
+  useLinkedAccounts,
+} from "@/hooks/useLinkedAccounts";
+import {
+  CheckCircle2,
+  CircleOff,
+  ExternalLink,
+  Loader2,
+  TriangleAlert,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -33,6 +43,7 @@ export const LinkedAccountsSection = () => {
           "Manage Cleo for Discord servers, automations, and billing.",
         status: data?.providers.discord,
         linked: hasDiscord,
+        needsRelink: data?.providers.discord.needsRelink ?? false,
         button: (
           <DiscordAuthButton
             onClick={() => handleLink("discord")}
@@ -53,6 +64,7 @@ export const LinkedAccountsSection = () => {
           "Control Cleo for Kick creators, chat commands, and channel tools.",
         status: data?.providers.kick,
         linked: hasKick,
+        needsRelink: data?.providers.kick.needsRelink ?? false,
         button: (
           <KickAuthButton
             onClick={() => handleLink("kick")}
@@ -114,7 +126,13 @@ export const LinkedAccountsSection = () => {
               </p>
             </div>
             <Badge
-              variant={card.linked ? "glass" : "glass-muted"}
+              variant={
+                card.linked
+                  ? card.needsRelink
+                    ? "destructive"
+                    : "glass"
+                  : "glass-muted"
+              }
               className="gap-1"
             >
               {unlinkingProvider === card.provider ? (
@@ -128,15 +146,17 @@ export const LinkedAccountsSection = () => {
               ) : (
                 <CircleOff className="h-3 w-3" />
               )}
-              {card.linked ? "Linked" : "Not linked"}
+              {card.linked
+                ? card.needsRelink
+                  ? "Action needed"
+                  : "Linked"
+                : "Not linked"}
             </Badge>
           </header>
 
           <div className="flex-1 text-sm text-muted-foreground">
-            {card.status?.accountId ? (
-              <p className="break-all text-xs text-muted-foreground/80">
-                Account ID: {card.status.accountId}
-              </p>
+            {card.linked && card.status ? (
+              <AccountStatusDetails status={card.status} />
             ) : (
               <p>Connect your account to unlock this dashboard.</p>
             )}
@@ -154,12 +174,16 @@ export const LinkedAccountsSection = () => {
                 </Link>
               </Button>
               <Button
-                variant="glass-muted"
+                variant={card.needsRelink ? "glass-destructive" : "glass-muted"}
                 className="w-full sm:w-auto"
                 onClick={() => handleLink(card.provider)}
                 disabled={linkingProvider === card.provider}
               >
-                {linkingProvider === card.provider ? "Relinking..." : "Relink"}
+                {linkingProvider === card.provider
+                  ? "Relinking..."
+                  : card.needsRelink
+                  ? "Fix permissions"
+                  : "Relink"}
               </Button>
               <Button
                 variant="glass-destructive"
@@ -182,6 +206,31 @@ export const LinkedAccountsSection = () => {
           )}
         </article>
       ))}
+    </div>
+  );
+};
+
+const AccountStatusDetails = ({ status }: { status: ProviderStatus }) => {
+  const granted = status.grantedScopes.join(", ");
+  const missing = status.missingScopes.join(", ");
+
+  return (
+    <div className="flex flex-col gap-2 text-xs text-muted-foreground/80">
+      <p>
+        Signed in as{" "}
+        <span className="font-medium text-foreground">
+          {status.displayName ?? status.accountId ?? "Unknown user"}
+        </span>
+      </p>
+      <p>Granted scopes: {granted.length ? granted : "None"}</p>
+      {status.missingScopes.length > 0 ? (
+        <p className="flex items-center gap-1 text-amber-400">
+          <TriangleAlert className="h-3.5 w-3.5" />
+          Missing scopes: {missing}. Please relink to restore full access.
+        </p>
+      ) : (
+        <p className="text-emerald-400">All required permissions granted.</p>
+      )}
     </div>
   );
 };

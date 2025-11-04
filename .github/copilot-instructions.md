@@ -5,7 +5,7 @@ These notes make you productive immediately in this repo. Keep changes small, fo
 ## Big picture
 
 - Two runtimes:
-  - Next.js App Router UI at `src/app/**` (served at https://cleoai.cloud).
+  - Next.js 16 App Router UI at `src/app/**` (served at https://cleoai.cloud). Follow the official Next.js 16 docs and data-fetching patterns (async server components, partial prerendering, etc.).
   - Cloudflare Worker API using jstack/Hono at `src/server/**` (served at https://api.cleoai.cloud, base path `/api`). See `wrangler.json` and `src/server/index.ts`.
 - Auth: Better Auth (Discord + Twitch) with Prisma adapter. Cookie-based sessions are shared across subdomains via normalized cookie domain logic in `src/lib/betterAuth/factory.ts`.
 - Data: Postgres via Prisma Accelerate edge client (`src/lib/prisma.ts`, schema in `prisma/schema.prisma`).
@@ -26,6 +26,8 @@ These notes make you productive immediately in this repo. Keep changes small, fo
 ## Conventions & gotchas
 
 - Do not import the server `auth` into client code or use `authClient` on the server.
+- Follow Next.js 16 conventions for file-based routing, route handlers, and server actions; avoid deprecated APIs and upgrade patterns promptly.
+- Use Bun as the default runtime and package manager for scripts/commands; avoid pnpm unless explicitly required.
 - Cookies: `sameSite=lax`, `secure` in prod, and `cookies.domain` must be the registrable domain (e.g. `cleoai.cloud`). Never set `COOKIE_DOMAIN` locally (browsers reject `localhost`). See README “Auth Cookie Domain (Important)” and the normalization in `createAuth()`.
 - Choose the right procedure when adding API routes:
   - Public read: `publicProcedure.get(...)`
@@ -40,14 +42,15 @@ These notes make you productive immediately in this repo. Keep changes small, fo
 
 ## Develop & run
 
-- Install: `pnpm install` (postinstall runs `prisma db push`, client generate, and seeds Stripe product templates).
-- Run UI only: `pnpm dev` (Next at 3000). Run API only: `pnpm wrangler dev` (Worker at 8080). Run both: `pnpm start:dev` (see `mprocs.yaml`).
+- Install: `bun install` (postinstall runs `prisma db push`, client generate, and seeds Stripe product templates).
+- Run UI only: `bun dev` (Next at 3000). Run API only: `bun wrangler dev` (Worker at 8080). Run both: `bun run start:dev` (see `mprocs.yaml`).
 - Required env (see README): `DATABASE_URL`, `BETTER_AUTH_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLIC_KEY`, `NEXT_PUBLIC_SITE_URL`.
   - Critical: set `NEXT_PUBLIC_API_URL` to the API origin (e.g. `http://localhost:8080` in dev, `https://api.cleoai.cloud` in prod).
   - Only set `COOKIE_DOMAIN` in prod (registrable domain like `cleoai.cloud`, no protocol/port/subdomain).
 
 ## Quick examples
 
+- Discord dashboard experiences now live under `/dashboard/k`, and Kick flows also resolve through `/dashboard/k`; make sure shared layouts, guards, and API calls align with that consolidated path.
 - Add a protected GET route:
   - `src/server/routers/example-router.ts`: `export const exampleRouter = j.router({ me: dashProcedure.get(({ c, ctx }) => c.json({ id: ctx.user.id })) });`
   - Merge in `src/server/index.ts`: add `example: exampleRouter`.
@@ -61,6 +64,10 @@ These notes make you productive immediately in this repo. Keep changes small, fo
 - API composition: `src/server/index.ts`, procedures/middleware in `src/server/jstack.ts`, routers in `src/server/routers/*`
 - Prisma: `prisma/schema.prisma`, client bootstrap in `src/lib/prisma.ts`
 - Infra: `wrangler.json` (Workers + KV), `mprocs.yaml` (run UI+API together)
+
+## Design language
+
+- Preserve the liquid glass aesthetic: favor translucent panels, layered blurs, and subtle light/refraction treatments in new UI work.
 
 ## Troubleshooting
 

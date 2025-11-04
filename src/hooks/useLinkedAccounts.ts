@@ -24,14 +24,34 @@ export const PROVIDER_DESCRIPTION: Record<LinkedProvider, string> = {
   kick: "Control Cleo for Kick creators, chat commands, and channel tools.",
 };
 
+export type ProviderStatus = {
+  linked: boolean;
+  accountId: string | null;
+  username: string | null;
+  displayName: string | null;
+  grantedScopes: string[];
+  missingScopes: string[];
+  needsRelink: boolean;
+  expiresAt: string | null;
+  lastLinkedAt: string | null;
+};
+
 export type LinkedAccountsData = {
   user: {
+    id: string | null;
+    extId: string;
     username: string | null;
     email: string | null;
+    discordId: string | null;
+    discordUsername: string | null;
+    kickId: string | null;
+    kickUsername: string | null;
+    customerId: string | null;
+    timezone: string | null;
   };
   providers: {
-    discord: { linked: boolean; accountId: string | null };
-    kick: { linked: boolean; accountId: string | null };
+    discord: ProviderStatus;
+    kick: ProviderStatus;
   };
 };
 
@@ -40,7 +60,7 @@ export const fetchLinkedAccounts = async (): Promise<LinkedAccountsData> => {
   if (!res.ok) {
     throw new Error("Failed to load linked accounts");
   }
-  return res.json();
+  return await res.json();
 };
 
 export const useLinkedAccounts = () => {

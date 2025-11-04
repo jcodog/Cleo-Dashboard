@@ -9,7 +9,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PreReleaseBanner } from "../components/PreReleaseBanner";
 // Temp: Remove databuddy until can figure out and fix the weird error about package sub dependencies
-// import { Databuddy } from "@databuddy/sdk/react";
+import { Databuddy } from "@databuddy/sdk/react";
 
 export const metadata: Metadata = {
   title: { default: "Cleo", template: "%s | Cleo" },
@@ -73,7 +73,7 @@ export default function RootLayout({
         >
           <JStackProvider>
             {children}
-            {/* <Databuddy
+            <Databuddy
               clientId="kYvU4Eddh8RzHScTlZ3Pj"
               trackScreenViews={true}
               trackPerformance={true}
@@ -89,7 +89,7 @@ export default function RootLayout({
               trackExitIntent={true}
               trackHashChanges={true}
               trackInteractions={true}
-            /> */}
+            />
             <Toaster
               richColors
               position="top-right"

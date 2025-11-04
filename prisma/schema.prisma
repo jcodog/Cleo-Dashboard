@@ -63,7 +63,9 @@ model Users {
   email                String?               @unique
   extId                String?               @unique
   discordId            String?               @unique
+  discordUsername      String?
   kickId               String?               @unique
+  kickUsername         String?
   role                 Role                  @default(user)
   customerId           String?               @unique
   timezone             String?
