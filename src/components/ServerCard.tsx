@@ -1,7 +1,19 @@
-import Image from "next/image";
+import Image, { type ImageLoader } from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+
+const DISCORD_ICON_BASE_URL = "https://cdn.discordapp.com/icons";
+const DISCORD_ICON_FALLBACK =
+  "https://cdn.cleoai.cloud/site-icons/guild-missing-icon.png";
+
+const discordIconLoader: ImageLoader = ({ src, width }) => {
+  const url = new URL(src);
+  const iconSize = width > 2048 ? 4096 : 2048;
+
+  url.searchParams.set("size", iconSize.toString());
+  return url.toString();
+};
 
 interface ServerCardProps {
   serverName: string;
@@ -16,11 +28,14 @@ export const ServerCard = ({
   serverImage,
   isRecent = false,
 }: ServerCardProps) => {
-  const imageUrl = serverImage
-    ? `https://cdn.discordapp.com/icons/${serverId}/${serverImage}.${
-        serverImage.startsWith("a_") ? "gif" : "png"
-      }?size=2048`
-    : "https://cdn.cleoai.cloud/site-icons/guild-missing-icon.png";
+  const hasDiscordImage = Boolean(serverImage);
+  const imageBaseUrl = hasDiscordImage
+    ? `${DISCORD_ICON_BASE_URL}/${serverId}/${serverImage}.${
+        serverImage?.startsWith("a_") ? "gif" : "png"
+      }`
+    : DISCORD_ICON_FALLBACK;
+
+  const imageSizes = "(max-width: 768px) 100vw, 340px";
 
   return (
     <>
@@ -41,9 +56,11 @@ export const ServerCard = ({
           </Badge>
         )}
         <Image
-          src={imageUrl}
+          src={imageBaseUrl}
+          loader={hasDiscordImage ? discordIconLoader : undefined}
           alt={`${serverName}'s icon`}
           fill
+          sizes={imageSizes}
           className="absolute inset-0 object-cover z-5"
         />
         <p className="absolute text-pretty truncate overflow-hidden text-md font-semibold bg-background/60 backdrop-blur-sm border-t border-white/10 bottom-0 w-full z-10 text-center p-2">
@@ -68,9 +85,11 @@ export const ServerCard = ({
           </Badge>
         )}
         <Image
-          src={imageUrl}
+          src={imageBaseUrl}
+          loader={hasDiscordImage ? discordIconLoader : undefined}
           alt={`${serverName}'s icon`}
           fill
+          sizes={imageSizes}
           className="absolute inset-0 object-cover z-5"
         />
         <div className="absolute z-10 flex items-center justify-center h-full w-full text-pretty truncate overflow-hidden bg-background/60 backdrop-blur-sm border-t border-white/10 opacity-0 animate-out slide-out-to-bottom group-hover:opacity-100 group-hover:animate-in group-hover:slide-in-from-bottom duration-250 p-4">
