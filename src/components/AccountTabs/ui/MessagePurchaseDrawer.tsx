@@ -210,7 +210,7 @@ export const MessagePurchaseDrawer = () => {
               <div className="mt-1 flex items-start gap-2">
                 <Lock className="mt-0.5 h-4 w-4 text-blue-500" />
                 <p>
-                  We never store your card details—Stripe handles them
+                  We never store your card details. Stripe handles them
                   end‑to‑end.
                 </p>
               </div>
