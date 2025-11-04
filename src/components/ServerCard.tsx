@@ -92,7 +92,7 @@ export const ServerCard = ({
           sizes={imageSizes}
           className="absolute inset-0 object-cover z-5"
         />
-        <div className="absolute z-10 flex items-center justify-center h-full w-full text-pretty truncate overflow-hidden bg-background/60 backdrop-blur-sm border-t border-white/10 opacity-0 animate-out slide-out-to-bottom group-hover:opacity-100 group-hover:animate-in group-hover:slide-in-from-bottom duration-250 p-4">
+        <div className="absolute -inset-px z-10 flex items-center justify-center rounded-[inherit] text-pretty truncate overflow-hidden bg-background/60 backdrop-blur-sm border-t border-white/10 opacity-0 animate-out slide-out-to-bottom group-hover:opacity-100 group-hover:animate-in group-hover:slide-in-from-bottom duration-250 p-4">
           <p className="text-md font-semibold truncate overflow-hidden">
             {serverName}
           </p>
