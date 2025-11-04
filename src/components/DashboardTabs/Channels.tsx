@@ -1,4 +1,4 @@
-import { TabProps } from "@/app/dashboard/guild/[guildId]/page";
+import { TabProps } from "@/app/dashboard/d/guild/[guildId]/page";
 import { ChannelItem } from "@/components/DashboardTabs/EditForms/ChannelItem";
 import { Heading } from "@/components/Heading";
 import { Panel, PanelHeader } from "@/components/ui/panel";
@@ -78,11 +78,12 @@ export const Channels = ({ guildId, getTokenAction }: TabProps) => {
           description="Assign dedicated channels Cleo uses for key events and automation."
         />
       </Panel>
-      <Panel className="w-full max-w-3xl">
+      <Panel className="w-full">
         {isLoading ? (
           <p className="text-muted-foreground text-sm">Loading channels...</p>
         ) : (
-          <ul className="flex flex-col gap-3">
+          // Constrain inner content for readability while outer panel is full width
+          <ul className="flex flex-col gap-3 w-full pr-2">
             <ChannelItem
               settingName={channelLabels.welcomeChannel!}
               channelName={welcomeChannel.name}

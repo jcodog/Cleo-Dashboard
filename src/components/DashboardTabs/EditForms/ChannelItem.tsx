@@ -12,7 +12,7 @@ import { client } from "@/lib/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RESTGetAPIGuildChannelsResult } from "discord-api-types/v10";
 import { Pen, Save, Trash } from "lucide-react";
-import { useState, useEffect } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export const ChannelItem = ({
@@ -66,17 +66,20 @@ export const ChannelItem = ({
 
   // Sync local channel state when props change
   useEffect(() => {
-    setChannel({ name: channelName, id: channelId });
-  }, [channelName, channelId]);
+    if (editing) return;
+    startTransition(() => {
+      setChannel({ name: channelName, id: channelId });
+    });
+  }, [channelName, channelId, editing]);
 
   return (
-    <li className="group flex gap-4 items-center w-full max-w-3xl rounded-lg border border-border/55 bg-card/60 backdrop-blur-sm px-4 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-colors hover:bg-card/70">
-      <div className="flex min-w-48 h-full items-center">
-        <h3 className="text-sm font-medium tracking-wide text-muted-foreground group-hover:text-foreground transition-colors uppercase">
+    <li className="group grid grid-cols-[190px_1fr_auto] gap-4 items-center w-full rounded-lg border border-border/55 bg-card/60 backdrop-blur-sm px-4 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-colors hover:bg-card/70">
+      <div className="flex h-full items-center">
+        <h3 className="text-sm font-medium tracking-wide text-muted-foreground group-hover:text-foreground transition-colors uppercase leading-tight">
           {settingName}
         </h3>
       </div>
-      <div className="flex h-full flex-1 min-w-40">
+      <div className="flex h-full flex-1 min-w-40 items-center">
         {editing ? (
           <Select
             onValueChange={(value) => {
@@ -108,24 +111,25 @@ export const ChannelItem = ({
             </SelectContent>
           </Select>
         ) : channel.name && channel.id ? (
-          <p className="flex items-center h-full text-sm gap-1 truncate font-medium">
-            {channel.name}
-            <span className="flex items-end h-full text-[10px] text-muted-foreground font-normal tracking-wide">
-              ({channel.id})
+          <div className="flex flex-col gap-0.5 leading-tight">
+            <span className="text-sm font-semibold tracking-tight text-foreground">
+              {channel.name}
             </span>
-          </p>
+            <span className="text-[11px] text-muted-foreground/80 tracking-wide uppercase">
+              {channel.id}
+            </span>
+          </div>
         ) : (
           <p className="flex items-center h-full text-xs gap-1 truncate text-muted-foreground italic">
             Set a channel
           </p>
         )}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 justify-end">
         {editing ? (
           <Button
-            variant="gradient"
+            variant="glass"
             size="icon"
-            className="cursor-pointer"
             onClick={() => {
               setSaving(true);
               mutate();
@@ -135,19 +139,13 @@ export const ChannelItem = ({
             <Save className="size-4" />
           </Button>
         ) : (
-          <Button
-            variant="outline"
-            size="icon"
-            className="cursor-pointer"
-            onClick={() => setEditing(true)}
-          >
+          <Button variant="glass" size="icon" onClick={() => setEditing(true)}>
             <Pen className="size-4" />
           </Button>
         )}
         <Button
-          variant="destructive"
+          variant="glass-destructive"
           size="icon"
-          className="cursor-pointer"
           disabled={editing || !channel.name || !channel.id}
         >
           <Trash className="size-4" />

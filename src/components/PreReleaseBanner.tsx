@@ -13,7 +13,7 @@ export const PreReleaseBanner = () => {
     );
   return (
     <div className="fixed top-0 left-0 z-50 overflow-visible pointer-events-none">
-      <div className="relative flex items-center space-x-1 h-7 pl-2 pr-4 bg-gradient-to-br from-pink-400 via-purple-400 to-blue-400 bg-opacity-60 backdrop-blur-md border border-white/30 rounded-br-full text-white text-xs font-mono font-bold shadow-lg">
+      <div className="relative flex items-center space-x-1 h-7 pl-2 pr-4 bg-linear-to-br from-pink-400 via-purple-400 to-blue-400 bg-opacity-60 backdrop-blur-md border border-white/30 rounded-br-full text-white text-xs font-mono font-bold shadow-lg">
         {Icon}
         <span>{message}</span>
       </div>

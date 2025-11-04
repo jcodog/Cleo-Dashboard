@@ -7,14 +7,12 @@ import { client } from "@/lib/client";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { BsCloudCheck } from "react-icons/bs";
 import { toast } from "sonner";
 
 const WelcomePage = () => {
   const router = useRouter();
-  const [synced, setSynced] = useState<boolean | undefined>(false);
-
   const { data } = useQuery({
     queryKey: ["sync-user-welcome"],
     queryFn: async () => {
@@ -27,16 +25,20 @@ const WelcomePage = () => {
     },
   });
 
+  const hasAnnouncedRef = useRef(false);
+
   useEffect(() => {
-    if (data?.synced) {
-      setSynced(true);
+    if (data?.synced && !hasAnnouncedRef.current) {
+      hasAnnouncedRef.current = true;
       toast.success("User account created");
     }
   }, [data]);
 
+  const isSynced = Boolean(data?.synced);
+
   return (
     <section className="flex flex-1 w-full flex-col items-center justify-center">
-      {synced ? (
+      {isSynced ? (
         // Synced
         <div className="flex flex-1 w-full p-4 bg-accent/40 rounded-md flex-col items-center justify-center gap-4">
           <Heading>

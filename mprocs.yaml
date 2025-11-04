@@ -1,5 +1,7 @@
 procs:
   cleo_dash-front:
-    shell: "pnpm dev"
+    shell: "bun run dev"
   cleo_dash-back:
-    shell: "pnpm wrangler dev"
+    shell: "bunx wrangler dev"
+  cleo_stripe-webhooks:
+    shell: "svix listen http://localhost:3000/webhooks/stripe"

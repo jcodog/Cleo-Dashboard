@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/select";
 import { client } from "@/lib/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { RESTGetAPIGuildChannelsResult } from "discord-api-types/v10";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -20,8 +19,6 @@ import { toast } from "sonner";
 const ServerAddNextPage = () => {
   const router = useRouter();
   const [channelId, setChannelId] = useState<string>();
-  const [guildId, setGuildId] = useState<string>();
-  const [channels, setChannels] = useState<RESTGetAPIGuildChannelsResult>();
 
   const { data, isLoading } = useQuery({
     queryKey: ["finalise-guild-onboarding"],
@@ -54,13 +51,13 @@ const ServerAddNextPage = () => {
   });
 
   useEffect(() => {
-    if (data && data.channels && data.guildId) {
-      setChannels(data.channels);
-      setGuildId(data.guildId);
-    } else if (data && !data.channels) {
+    if (data && !data.channels) {
       toast.error(data.message);
     }
   }, [data]);
+
+  const channels = data?.channels ?? null;
+  const guildId = data?.guildId;
 
   useEffect(() => {
     if (configuredGuild && configuredGuild.configured) {

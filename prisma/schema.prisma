@@ -62,7 +62,10 @@ model Users {
   username             String                @unique
   email                String?               @unique
   extId                String?               @unique
-  discordId            String                @unique
+  discordId            String?               @unique
+  discordUsername      String?
+  kickId               String?               @unique
+  kickUsername         String?
   role                 Role                  @default(user)
   customerId           String?               @unique
   timezone             String?
@@ -70,9 +73,6 @@ model Users {
   plan                 Plans                 @default(FREE)
   limits               Limits?
   premiumServers       Servers[]
-  cleoPersonalityName  String?
-  cleoPersonalityId    String?
-  cleoPersonality      CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id], onDelete: SetNull)
 }
 
 model Limits {
@@ -105,7 +105,6 @@ model Servers {
   lastOpened          DateTime?
   cleoPersonalityName String?
   cleoPersonalityId   String?
-  cleoPersonality     CleoPersonalities?    @relation(fields: [cleoPersonalityName, cleoPersonalityId], references: [name, id], onDelete: SetNull)
   AutomodConfig       AutomodConfig[]
   ServerSubscriptions ServerSubscriptions[]
 
@@ -149,16 +148,6 @@ model Incidents {
   status      IncidentsStatus @default(OPEN)
 }
 
-model CleoPersonalities {
-  id           String    @id @default(cuid())
-  name         String
-  systemPrompt String
-  Servers      Servers[]
-  Users        Users[]
-
-  @@unique([name, id])
-}
-
 model Products {
   id     String      @id // The stripe product id
   name   String      @unique
@@ -184,6 +173,18 @@ model AutomodConfig {
   approvedLinks   String[] @default([])
   guildId         String   @unique
   guild           Servers  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+model Testimonials {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  displayName String
+  userImg     String
+  userId      String?
+  rating      Int
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
 }
 
 model User {

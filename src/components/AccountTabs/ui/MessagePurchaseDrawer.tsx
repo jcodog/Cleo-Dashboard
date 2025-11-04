@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Drawer,
   DrawerContent,
@@ -19,7 +20,6 @@ import { toast } from "sonner";
 
 export const MessagePurchaseDrawer = () => {
   const router = useRouter();
-  // Access Clerk token helper at the top level (Rules of Hooks compliant)
 
   const { data, isLoading } = useQuery({
     queryKey: ["get-message-bundles"],
@@ -44,7 +44,7 @@ export const MessagePurchaseDrawer = () => {
         price: priceId,
         type: "payment",
         domain: process.env.NEXT_PUBLIC_APP_URL!,
-        path: "dashboard/account/usage",
+        path: "dashboard/account",
       });
 
       const { url, message } = await res.json();
@@ -89,41 +89,45 @@ export const MessagePurchaseDrawer = () => {
     featured?: boolean;
     onClick?: (priceId: string) => void;
   }) => (
-    <button
-      type="button"
-      onClick={() =>
-        onClick ? onClick(priceId) : console.log("select price", priceId)
-      }
-      className={cn(
-        "cursor-pointer relative w-full text-left rounded-lg border p-4 transition focus:outline-none focus:ring-2 focus:ring-primary",
-        featured
-          ? "border-primary/50 bg-primary/5 hover:bg-primary/10 ring-1 ring-primary/30"
-          : "border-border hover:bg-muted/40"
-      )}
-    >
+    <div className="relative w-full">
       {featured && (
-        <span className="pointer-events-none absolute -top-2 -left-2 rounded-full border border-primary/30 bg-background px-2 py-0.5 text-[10px] font-medium text-primary shadow-sm">
+        <Badge
+          variant="glass"
+          className="pointer-events-none absolute -top-2 -left-2 z-1 px-2 py-0.5 text-[10px] font-medium text-primary border-primary/30"
+        >
           Recommended
-        </span>
+        </Badge>
       )}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-medium">
-            {messages
-              ? `${messages.toLocaleString()} messages`
-              : "Message bundle"}
+      <Button
+        type="button"
+        variant="glass"
+        onClick={() =>
+          onClick ? onClick(priceId) : console.log("select price", priceId)
+        }
+        className={cn(
+          "w-full justify-start text-left rounded-lg p-4 h-auto",
+          featured && "ring-1 ring-primary/30"
+        )}
+      >
+        <div className="flex items-start justify-between gap-3 w-full">
+          <div>
+            <div className="text-sm font-medium">
+              {messages
+                ? `${messages.toLocaleString()} messages`
+                : "Message bundle"}
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              One-time top up.
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground mt-0.5">
-            One-time top up.
+          <div className="text-right">
+            <div className="text-base font-semibold">
+              {formatCurrency(amount)}
+            </div>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-base font-semibold">
-            {formatCurrency(amount)}
-          </div>
-        </div>
-      </div>
-    </button>
+      </Button>
+    </div>
   );
 
   const featured: "default" | number = "default";
@@ -131,7 +135,7 @@ export const MessagePurchaseDrawer = () => {
   return (
     <Drawer>
       <DrawerTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full">
+        <Button variant="glass" size="sm" className="w-full">
           <PlusCircle className="size-4" /> Get More
         </Button>
       </DrawerTrigger>
@@ -206,7 +210,7 @@ export const MessagePurchaseDrawer = () => {
               <div className="mt-1 flex items-start gap-2">
                 <Lock className="mt-0.5 h-4 w-4 text-blue-500" />
                 <p>
-                  We never store your card details—Stripe handles them
+                  We never store your card details. Stripe handles them
                   end‑to‑end.
                 </p>
               </div>

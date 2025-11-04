@@ -4,6 +4,21 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { lastLoginMethod } from "better-auth/plugins";
 
+/**
+ * Environment configuration used to initialize Better Auth and related services.
+ *
+ * Properties are typically sourced from process env or platform secrets and
+ * passed in explicitly to make the factory pure and testable.
+ *
+ * @property DATABASE_URL - Full connection string for Postgres used by Prisma.
+ * @property BETTER_AUTH_SECRET - Secret used by Better Auth for signing/crypto.
+ * @property NEXT_PUBLIC_SITE_URL - Absolute base URL of the site (e.g. https://cleoai.cloud).
+ * @property COOKIE_DOMAIN - Optional cookie Domain attribute (e.g. "cleoai.cloud"). If omitted,
+ *   a value will be derived from NEXT_PUBLIC_SITE_URL when possible.
+ * @property DISCORD_CLIENT_ID - Discord OAuth client id.
+ * @property DISCORD_CLIENT_SECRET - Discord OAuth client secret.
+ * @property STRIPE_SECRET_KEY - Stripe secret API key for Customer creation/backfill.
+ */
 export type AuthEnv = {
   DATABASE_URL: string;
   BETTER_AUTH_SECRET: string;
@@ -12,8 +27,28 @@ export type AuthEnv = {
   DISCORD_CLIENT_ID?: string;
   DISCORD_CLIENT_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
+  KICK_CLIENT_ID?: string;
+  KICK_CLIENT_SECRET?: string;
 };
 
+/**
+ * Create and configure a Better Auth instance bound to the provided environment.
+ *
+ * This function wires up:
+ * - Prisma adapter using the provided DATABASE_URL
+ * - Discord social provider
+ * - Cookie domain normalization for cross-subdomain auth between Next and Workers
+ * - Account creation/linking hooks that also synchronize your app's Users table
+ *   and backfill Stripe Customers when configured
+ * - Sensible security defaults for cookies, trusted origins and cross-subdomain sharing
+ *
+ * Notes:
+ * - In development (localhost), the cookie Domain attribute is omitted intentionally.
+ * - If STRIPE_SECRET_KEY is not provided, Stripe customer creation is skipped.
+ *
+ * @param env - Environment and secret configuration (see AuthEnv)
+ * @returns The configured Better Auth instance
+ */
 export const createAuth = (env: AuthEnv) => {
   const db = getDb(env.DATABASE_URL ?? "");
 
@@ -24,6 +59,12 @@ export const createAuth = (env: AuthEnv) => {
   //  - Secure MUST be true on production (HTTPS).
   //  - SameSite can stay "lax" because subdomains count as same‑site; do NOT use default host‑only cookie.
   // If COOKIE_DOMAIN is misconfigured we attempt to repair and emit a console.warn once.
+  /**
+   * Cookie Domain attribute to be used for auth cookies. When defined, it allows
+   * cookies to be shared across subdomains (e.g. app.cleoai.cloud and api.cleoai.cloud).
+   * Will be derived from COOKIE_DOMAIN or NEXT_PUBLIC_SITE_URL, and will be cleared
+   * on localhost to avoid invalid Domain attributes in dev.
+   */
   let normalizedCookieDomain: string | undefined;
   const warned: string[] = [];
   const raw = (env.COOKIE_DOMAIN || "").trim();
@@ -56,28 +97,11 @@ export const createAuth = (env: AuthEnv) => {
     }
   }
 
-  if (
-    normalizedCookieDomain &&
-    normalizedCookieDomain.startsWith("localhost")
-  ) {
-    warned.push(
-      `Omitting Domain attribute for localhost ('${normalizedCookieDomain}'); cross-subdomain sharing is not needed in local dev.`
-    );
-    normalizedCookieDomain = undefined;
-  }
-
   if (warned.length) {
     console.warn("[auth:cookies]", warned.join(" "));
   }
 
-  if (process.env.BETTER_AUTH_DEBUG_COOKIES === "1") {
-    console.log("[auth:cookies:config]", {
-      normalizedCookieDomain,
-      siteUrl: env.NEXT_PUBLIC_SITE_URL,
-      rawCookieDomain: raw || null,
-    });
-  }
-
+  /** Stripe client configured from STRIPE_SECRET_KEY (if present). */
   const stripeSecret = env.STRIPE_SECRET_KEY;
   const stripe = stripeSecret
     ? loadStripe({ secretKey: stripeSecret })
@@ -97,9 +121,14 @@ export const createAuth = (env: AuthEnv) => {
           "email",
           "guilds",
           "connections",
-          "guilds.join",
           "guilds.members.read",
         ],
+        /**
+         * Map the Discord OAuth profile to Better Auth's user record shape.
+         *
+         * @param profile - Discord profile as returned by the provider
+         * @returns Minimal user details used to seed the Better Auth user
+         */
         mapProfileToUser: (profile) => {
           return {
             email: profile.email,
@@ -112,6 +141,51 @@ export const createAuth = (env: AuthEnv) => {
             username: profile.username,
             locale: profile.locale,
             emailVerified: profile.verified,
+          };
+        },
+      },
+
+      kick: {
+        enabled: Boolean(env.KICK_CLIENT_ID && env.KICK_CLIENT_SECRET),
+        clientId: env.KICK_CLIENT_ID ?? "",
+        clientSecret: env.KICK_CLIENT_SECRET ?? "",
+        scope: [
+          "user:read",
+          "channel:read",
+          "channel:write",
+          "chat:write",
+          "streamkey:read",
+          "events:subscribe",
+          "moderation:ban",
+        ],
+        mapProfileToUser: (profile) => {
+          const rawProfile = profile as unknown as Record<string, unknown>;
+          const getString = (key: string) => {
+            const value = rawProfile[key];
+            return typeof value === "string" ? value : undefined;
+          };
+
+          const usernameCandidate =
+            getString("username") ??
+            getString("user_name") ??
+            getString("slug") ??
+            getString("login") ??
+            getString("display_name");
+
+          const nameCandidate =
+            getString("display_name") ?? getString("name") ?? usernameCandidate;
+
+          const imageCandidate =
+            getString("profile_picture") ??
+            getString("avatar") ??
+            getString("image") ??
+            getString("profileImage");
+
+          return {
+            email: getString("email"),
+            name: nameCandidate,
+            image: imageCandidate,
+            username: usernameCandidate,
           };
         },
       },
@@ -146,218 +220,339 @@ export const createAuth = (env: AuthEnv) => {
            * @param ctx     Hook context (not used here, but kept for parity)
            */
           after: async (account) => {
-            // Only care about Discord accounts for this logic
-            if (account.providerId !== "discord") return;
-
             const prisma = db;
+            if (
+              account.providerId !== "discord" &&
+              account.providerId !== "kick"
+            ) {
+              return;
+            }
 
             // Pull the Better Auth User so we can read email/name/locale
-            const authUser = await prisma.user.findUnique({
-              where: { id: account.userId },
-            });
+            const authUser = await prisma.user
+              .findUnique({ where: { id: account.userId } })
+              .catch(() => null);
 
-            // Helper: generate a collision-safe username
-            const pickUniqueUsername = async (base: string) => {
-              const safe = base
-                .toLowerCase()
-                .replace(/[^a-z0-9_]/g, "_")
-                .slice(0, 30);
-              let candidate = safe;
+            // Helper: generate a collision-safe username shared by all providers
+            const createRandomUsername = () =>
+              `cleo_${Math.random().toString(36).slice(2, 10)}`;
+
+            const normalizeUsername = (value: string) => {
+              const lowered = value.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+              const squashed = lowered.replace(/_+/g, "_");
+              const trimmed = squashed.replace(/^_+|_+$/g, "");
+              return trimmed.slice(0, 30);
+            };
+
+            const ensureSafeUsername = (value: string) => {
+              const normalized = normalizeUsername(value);
+              if (normalized.length) return normalized;
+              return normalizeUsername(createRandomUsername());
+            };
+
+            const pickUniqueUsername = async (raw: string) => {
+              const base = ensureSafeUsername(raw);
+              let candidate = base;
               for (let i = 0; i < 5; i++) {
                 const hit = await prisma.users
                   .findUnique({ where: { username: candidate } })
                   .catch(() => null);
                 if (!hit) return candidate;
-                candidate = `${safe}_${Math.random().toString(36).slice(2, 6)}`;
+                candidate = ensureSafeUsername(
+                  `${base}_${Math.random().toString(36).slice(2, 6)}`
+                );
               }
               return candidate;
             };
 
-            const display =
-              authUser?.username ??
-              authUser?.name ??
-              (authUser?.email
-                ? authUser.email.split("@")[0]
-                : `user_${account.userId.slice(0, 6)}`);
+            const preferredProviderUsername =
+              typeof authUser?.username === "string"
+                ? authUser.username.trim()
+                : "";
 
-            const username = await pickUniqueUsername(display as string);
+            const username = await pickUniqueUsername(
+              preferredProviderUsername || createRandomUsername()
+            );
 
-            // 0) Already linked by extId? (app user exists and is attached to this BA user)
-            const byExt = await prisma.users.findFirst({
-              where: { extId: account.userId },
-            });
-            if (byExt) {
-              // Stripe backfill (same logic you had)
-              if (stripe && !byExt.customerId) {
-                try {
-                  const customer = await stripe.customers.create({
-                    email: byExt.email || undefined,
-                    name: byExt.username || undefined,
-                    metadata: { extId: byExt.extId || "" },
-                  });
-                  await prisma.users.update({
-                    where: { id: byExt.id },
-                    data: { customerId: customer.id },
-                  });
-                } catch (e) {
-                  console.error(
-                    "[better-auth:account.created] stripe backfill failed",
-                    e
-                  );
-                }
-              }
-              return;
-            }
-
-            // 1) Claim by discordId (now guaranteed to exist on the Account)
-            const byDiscord = await prisma.users
-              .findUnique({ where: { discordId: account.accountId } })
-              .catch(() => null);
-
-            if (byDiscord && byDiscord.extId !== account.userId) {
-              await prisma.users.update({
-                where: { id: byDiscord.id },
-                data: {
-                  username,
-                  extId: account.userId,
-                  email: byDiscord.email ?? authUser?.email ?? null,
-                  timezone: authUser?.locale ?? byDiscord.timezone ?? null,
-                },
-              });
-
-              // Stripe backfill on claim
-              if (stripe && !byDiscord.customerId) {
-                try {
-                  const customer = await stripe.customers.create({
-                    email: byDiscord.email || authUser?.email || undefined,
-                    name: byDiscord.username || undefined,
-                    metadata: { extId: account.userId || "" },
-                  });
-                  await prisma.users.update({
-                    where: { id: byDiscord.id },
-                    data: { customerId: customer.id },
-                  });
-                } catch (e) {
-                  console.error(
-                    "[better-auth:account.created] stripe backfill failed",
-                    e
-                  );
-                }
-              }
-              return;
-            }
-
-            // 2) Claim by email (covers existing Clerk users)
-            if (authUser?.email) {
-              const byEmail = await prisma.users
-                .findUnique({ where: { email: authUser.email } })
-                .catch(() => null);
-
-              if (byEmail && byEmail.extId !== account.userId) {
-                await prisma.users.update({
-                  where: { id: byEmail.id },
-                  data: {
-                    username,
-                    extId: account.userId,
-                    discordId: account.accountId,
-                    timezone: authUser?.locale ?? byEmail.timezone ?? null,
-                  },
+            const ensureStripeCustomer = async (userRecord: {
+              id: string;
+              email: string | null;
+              username: string | null;
+              extId: string | null;
+              customerId: string | null;
+            }) => {
+              if (!stripe) return;
+              if (userRecord.customerId) return;
+              try {
+                const customer = await stripe.customers.create({
+                  email: userRecord.email || undefined,
+                  name: userRecord.username || undefined,
+                  metadata: { extId: userRecord.extId || userRecord.id },
                 });
-
-                // Stripe backfill on claim
-                if (stripe && !byEmail.customerId) {
-                  try {
-                    const customer = await stripe.customers.create({
-                      email: byEmail.email || undefined,
-                      name: byEmail.username || undefined,
-                      metadata: { extId: account.userId || "" },
-                    });
-                    await prisma.users.update({
-                      where: { id: byEmail.id },
-                      data: { customerId: customer.id },
-                    });
-                  } catch (e) {
-                    console.error(
-                      "[better-auth:account.created] stripe backfill failed",
-                      e
-                    );
-                  }
-                }
-                return;
-              }
-            }
-
-            // 3) Nothing to claim — create a fresh app user
-            try {
-              const created = await prisma.users.create({
-                data: {
-                  extId: account.userId,
-                  email: authUser?.email ?? null,
-                  username,
-                  discordId: account.accountId,
-                  timezone: authUser?.locale ?? null,
-                  limits: { create: { date: new Date() } },
-                },
-              });
-
-              // Stripe create & attach
-              if (stripe) {
-                try {
-                  const customer = await stripe.customers.create({
-                    email: created.email || undefined,
-                    name: created.username || undefined,
-                    metadata: { extId: created.extId || created.id },
-                  });
-                  await prisma.users.update({
-                    where: { id: created.id },
-                    data: { customerId: customer.id },
-                  });
-                } catch (e) {
-                  console.error(
-                    "[better-auth:account.created] stripe customer create failed",
-                    e
-                  );
-                }
-              } else {
-                console.warn(
-                  "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
+                await prisma.users.update({
+                  where: { id: userRecord.id },
+                  data: { customerId: customer.id },
+                });
+              } catch (e) {
+                console.error(
+                  "[better-auth:account.created] stripe backfill failed",
+                  e
                 );
               }
+            };
 
-              // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
-              // We intentionally suppress the lint rules for this line only.
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } catch (e: any) {
-              // Convert unique collisions into claims (handles races / parallel requests)
-              if (
-                e.code === "P2002" &&
-                e.meta?.target?.includes("email") &&
-                authUser?.email
-              ) {
-                await prisma.users.update({
-                  where: { email: authUser.email },
+            if (account.providerId === "discord") {
+              // 0) Already linked by extId? (app user exists and is attached to this BA user)
+              const byExt = await prisma.users.findFirst({
+                where: { extId: account.userId },
+              });
+              if (byExt) {
+                let target = byExt;
+                const needsUpdate =
+                  byExt.discordId !== account.accountId ||
+                  (authUser?.email && !byExt.email) ||
+                  (authUser?.locale && !byExt.timezone) ||
+                  !byExt.username;
+                if (needsUpdate) {
+                  target = await prisma.users.update({
+                    where: { id: byExt.id },
+                    data: {
+                      ...(byExt.username ? {} : { username }),
+                      discordId: account.accountId,
+                      email: byExt.email ?? authUser?.email ?? null,
+                      timezone: byExt.timezone ?? authUser?.locale ?? null,
+                    },
+                  });
+                }
+                await ensureStripeCustomer(target);
+                return;
+              }
+
+              // 1) Claim by discordId (now guaranteed to exist on the Account)
+              const byDiscord = await prisma.users
+                .findUnique({ where: { discordId: account.accountId } })
+                .catch(() => null);
+
+              if (byDiscord && byDiscord.extId !== account.userId) {
+                const updated = await prisma.users.update({
+                  where: { id: byDiscord.id },
                   data: {
-                    username,
+                    ...(byDiscord.username ? {} : { username }),
                     extId: account.userId,
+                    email: byDiscord.email ?? authUser?.email ?? null,
+                    timezone: authUser?.locale ?? byDiscord.timezone ?? null,
+                  },
+                });
+                await ensureStripeCustomer(updated);
+                return;
+              }
+
+              // 2) Claim by email (covers existing Clerk users)
+              if (authUser?.email) {
+                const byEmail = await prisma.users
+                  .findUnique({ where: { email: authUser.email } })
+                  .catch(() => null);
+
+                if (byEmail && byEmail.extId !== account.userId) {
+                  const updated = await prisma.users.update({
+                    where: { id: byEmail.id },
+                    data: {
+                      ...(byEmail.username ? {} : { username }),
+                      extId: account.userId,
+                      discordId: account.accountId,
+                      timezone: authUser?.locale ?? byEmail.timezone ?? null,
+                    },
+                  });
+                  await ensureStripeCustomer(updated);
+                  return;
+                }
+              }
+
+              // 3) Nothing to claim — create a fresh app user
+              try {
+                const created = await prisma.users.create({
+                  data: {
+                    extId: account.userId,
+                    email: authUser?.email ?? null,
+                    username,
                     discordId: account.accountId,
                     timezone: authUser?.locale ?? null,
+                    limits: { create: { date: new Date() } },
                   },
                 });
+
+                if (stripe) {
+                  await ensureStripeCustomer(created);
+                } else {
+                  console.warn(
+                    "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
+                  );
+                }
+                // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
+                // We intentionally suppress the lint rules for this line only.
+                 
+              } catch (e: any) {
+                // Convert unique collisions into claims (handles races / parallel requests)
+                if (
+                  e.code === "P2002" &&
+                  e.meta?.target?.includes("email") &&
+                  authUser?.email
+                ) {
+                  const updated = await prisma.users.update({
+                    where: { email: authUser.email },
+                    data: {
+                      username,
+                      extId: account.userId,
+                      discordId: account.accountId,
+                      timezone: authUser?.locale ?? null,
+                    },
+                  });
+                  await ensureStripeCustomer(updated);
+                  return;
+                }
+                if (
+                  e.code === "P2002" &&
+                  e.meta?.target?.includes("discordId")
+                ) {
+                  const updated = await prisma.users.update({
+                    where: { discordId: account.accountId },
+                    data: {
+                      username,
+                      extId: account.userId,
+                      email: authUser?.email ?? undefined,
+                      timezone: authUser?.locale ?? null,
+                    },
+                  });
+                  await ensureStripeCustomer(updated);
+                  return;
+                }
+                throw e;
+              }
+            }
+
+            if (account.providerId === "kick") {
+              // 0) Already linked by extId? (app user exists and is attached to this BA user)
+              const byExt = await prisma.users.findFirst({
+                where: { extId: account.userId },
+              });
+              if (byExt) {
+                let target = byExt;
+                const needsUpdate =
+                  byExt.kickId !== account.accountId ||
+                  (authUser?.email && !byExt.email) ||
+                  (authUser?.locale && !byExt.timezone) ||
+                  !byExt.username;
+                if (needsUpdate) {
+                  target = await prisma.users.update({
+                    where: { id: byExt.id },
+                    data: {
+                      ...(byExt.username ? {} : { username }),
+                      kickId: account.accountId,
+                      email: byExt.email ?? authUser?.email ?? null,
+                      timezone: byExt.timezone ?? authUser?.locale ?? null,
+                    },
+                  });
+                }
+                await ensureStripeCustomer(target);
                 return;
               }
-              if (e.code === "P2002" && e.meta?.target?.includes("discordId")) {
-                await prisma.users.update({
-                  where: { discordId: account.accountId },
+
+              // 1) Claim by kickId (if a user was pre-provisioned)
+              const byKick = await prisma.users
+                .findUnique({ where: { kickId: account.accountId } })
+                .catch(() => null);
+
+              if (byKick && byKick.extId !== account.userId) {
+                const updated = await prisma.users.update({
+                  where: { id: byKick.id },
                   data: {
-                    username,
+                    ...(byKick.username ? {} : { username }),
                     extId: account.userId,
-                    email: authUser?.email ?? undefined,
-                    timezone: authUser?.locale ?? null,
+                    email: byKick.email ?? authUser?.email ?? null,
+                    timezone: authUser?.locale ?? byKick.timezone ?? null,
                   },
                 });
+                await ensureStripeCustomer(updated);
                 return;
               }
-              throw e;
+
+              // 2) Claim by email (covers existing users that signed up through Discord first)
+              if (authUser?.email) {
+                const byEmail = await prisma.users
+                  .findUnique({ where: { email: authUser.email } })
+                  .catch(() => null);
+
+                if (byEmail && byEmail.extId !== account.userId) {
+                  const updated = await prisma.users.update({
+                    where: { id: byEmail.id },
+                    data: {
+                      ...(byEmail.username ? {} : { username }),
+                      extId: account.userId,
+                      kickId: account.accountId,
+                      timezone: authUser?.locale ?? byEmail.timezone ?? null,
+                    },
+                  });
+                  await ensureStripeCustomer(updated);
+                  return;
+                }
+              }
+
+              // 3) Nothing to claim — create a fresh app user (Kick-first flow)
+              try {
+                const created = await prisma.users.create({
+                  data: {
+                    extId: account.userId,
+                    email: authUser?.email ?? null,
+                    username,
+                    kickId: account.accountId,
+                    timezone: authUser?.locale ?? null,
+                    limits: { create: { date: new Date() } },
+                  },
+                });
+
+                if (stripe) {
+                  await ensureStripeCustomer(created);
+                } else {
+                  console.warn(
+                    "[better-auth:account.created] STRIPE_SECRET_KEY not configured; skipping customer creation"
+                  );
+                }
+                // NOTE: The type of error that the catch block can catch is unknown but we cannot handle unknown so must declare any so that any errors can be caught.
+                // We intentionally suppress the lint rules for this line only.
+                 
+              } catch (e: any) {
+                if (
+                  e.code === "P2002" &&
+                  e.meta?.target?.includes("email") &&
+                  authUser?.email
+                ) {
+                  const updated = await prisma.users.update({
+                    where: { email: authUser.email },
+                    data: {
+                      username,
+                      extId: account.userId,
+                      kickId: account.accountId,
+                      timezone: authUser?.locale ?? null,
+                    },
+                  });
+                  await ensureStripeCustomer(updated);
+                  return;
+                }
+                if (e.code === "P2002" && e.meta?.target?.includes("kickId")) {
+                  const updated = await prisma.users.update({
+                    where: { kickId: account.accountId },
+                    data: {
+                      username,
+                      extId: account.userId,
+                      email: authUser?.email ?? undefined,
+                      timezone: authUser?.locale ?? null,
+                    },
+                  });
+                  await ensureStripeCustomer(updated);
+                  return;
+                }
+                throw e;
+              }
             }
           },
         },
@@ -382,5 +577,12 @@ export const createAuth = (env: AuthEnv) => {
         storeInDatabase: true,
       }),
     ],
+    account: {
+      accountLinking: {
+        enabled: true,
+        allowDifferentEmails: true,
+        trustedProviders: ["discord", "kick"],
+      },
+    },
   });
 };

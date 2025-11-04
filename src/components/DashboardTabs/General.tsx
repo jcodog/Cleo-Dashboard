@@ -1,6 +1,6 @@
 "use client";
 
-import { TabProps } from "@/app/dashboard/guild/[guildId]/page";
+import { TabProps } from "@/app/dashboard/d/guild/[guildId]/page";
 import { InviteLink } from "@/components/DashboardTabs/EditForms/InviteLink";
 import { ServerInfo } from "@/components/DashboardTabs/EditForms/ServerInfo";
 import { Heading } from "@/components/Heading";
@@ -80,9 +80,9 @@ export const General = ({
           ))}
         </div>
       </Panel>
-      <div id="server-info" className="flex flex-col gap-6 items-center pb-8">
+      <div id="server-info" className="flex flex-col gap-6 pb-8 w-full">
         {isLoading ? null : !data ? (
-          <Panel className="w-full max-w-2xl">
+          <Panel className="w-full">
             <EmptyState
               variant="subtle"
               heading="No data available"
@@ -91,21 +91,21 @@ export const General = ({
           </Panel>
         ) : (
           <>
-            <Panel className="w-full max-w-2xl">
+            <Panel className="w-full">
               <ServerInfo
                 apiGuild={data?.guild as NonNullable<typeof data>["guild"]}
                 isDirty={isDirty}
                 setDirtyAction={setDirtyAction}
               />
             </Panel>
-            <Panel className="w-full max-w-2xl">
+            <Panel className="w-full">
               <InviteLink
                 guild={data?.dbGuild as NonNullable<typeof data>["dbGuild"]}
                 isDirty={isDirty}
                 setDirtyAction={setDirtyAction}
               />
             </Panel>
-            <Panel variant="danger" className="w-full max-w-2xl">
+            <Panel variant="danger" className="w-full">
               {data && data.dbGuild && (
                 // <DeleteGuild isOwner={data.isOwner} guildId={data.dbGuild.id} />
                 <DeleteGuild isOwner={data.isOwner} />
@@ -125,7 +125,7 @@ interface StatCardProps {
 }
 const StatCard = ({ icon: Icon, label, value }: StatCardProps) => (
   <div
-    className="group relative flex w-full flex-col gap-2 rounded-md border border-border/50 bg-gradient-to-b from-card/75 via-card/60 to-card/50 p-3 md:p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_1px_2px_-1px_rgba(0,0,0,0.4),0_2px_8px_-4px_rgba(0,0,0,0.45)] backdrop-blur-sm overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-0 transition-colors"
+    className="group relative flex w-full flex-col gap-2 rounded-md border border-border/50 bg-linear-to-b from-card/75 via-card/60 to-card/50 p-3 md:p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_1px_2px_-1px_rgba(0,0,0,0.4),0_2px_8px_-4px_rgba(0,0,0,0.45)] backdrop-blur-sm overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-0 transition-colors"
     tabIndex={0}
   >
     <div className="flex items-center gap-2 text-[11px] font-medium tracking-wide text-muted-foreground">

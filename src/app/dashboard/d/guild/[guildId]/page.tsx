@@ -149,7 +149,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
       if ("noPerm" in json) {
         const { toast } = await import("sonner");
         toast.error(json.error || "Permissions check failed");
-        router.push("/dashboard");
+        router.push("/dashboard/d");
         return;
       }
       // narrow union for success flag
@@ -175,9 +175,10 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
       <p>Loading server info...</p>
     </section>
   ) : (
-    <section className="relative flex flex-1 min-h-0 flex-col items-center p-6">
-      <div className="flex h-full max-h-full w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.25)]">
-        <div className="flex w-full gap-4 p-5 items-center justify-between rounded-t-xl bg-gradient-to-b from-accent/60 to-accent/30 border-b border-border/60 shrink-0">
+    <section className="relative flex flex-1 min-h-0 flex-col items-center p-4 sm:p-6">
+      {/* Expanded overall max width for more breathing room on guild dashboard */}
+      <div className="flex h-full max-h-full w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-border/60 bg-card/70 backdrop-blur supports-backdrop-filter:bg-card/60 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.25)]">
+        <div className="flex w-full gap-4 p-5 items-center justify-between rounded-t-xl bg-linear-to-b from-accent/60 to-accent/30 border-b border-border/60 shrink-0">
           <div className="flex gap-4 items-center justify-start min-w-0">
             <div className="relative h-11 w-11 shrink-0">
               <Image
@@ -196,11 +197,7 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
           </div>
 
           <div className="flex gap-2">
-            <Button
-              onClick={() => router.push("/dashboard")}
-              variant="gradient"
-              className="cursor-pointer"
-            >
+            <Button onClick={() => router.push("/dashboard/d")} variant="glass">
               <House className="size-4" />
               Home
             </Button>
@@ -208,7 +205,8 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
         </div>
 
         <div className="flex flex-1 min-h-0">
-          <div className="flex flex-col w-60 min-w-60 max-w-60 py-4 gap-2 bg-accent/20 rounded-bl-xl justify-between border-r border-border/60 shrink-0">
+          {/* Wider sidebar for clearer navigation labels and to avoid cramped user controls */}
+          <div className="flex flex-col w-72 min-w-72 max-w-72 py-5 gap-3 bg-accent/20 rounded-bl-xl justify-between border-r border-border/60 shrink-0">
             <ul className="flex flex-col gap-1.5 px-2 select-none">
               {tabs.map((tab) => (
                 <li
@@ -217,8 +215,8 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
                     if (!tab.disabled) {
                       const url =
                         tab.value === "overview"
-                          ? `/dashboard/guild/${guildId}`
-                          : `/dashboard/guild/${guildId}?tab=${tab.value}`;
+                          ? `/dashboard/d/guild/${guildId}`
+                          : `/dashboard/d/guild/${guildId}?tab=${tab.value}`;
                       confirmLeave(url);
                     }
                   }}
@@ -252,11 +250,20 @@ const GuildDashPage = ({ params }: GuildDashPageProps) => {
                 </li>
               ))}
             </ul>
-            <div className="flex justify-between px-4 pt-4 border-t border-border/60">
+            {/* User controls block */}
+            <div className="flex items-center justify-between gap-3 px-4 pt-5 border-t border-border/60">
               {session ? (
-                <UserButton namePosition="right" showName={true} />
+                <UserButton
+                  namePosition="right"
+                  showName={true}
+                  size={30}
+                  className="h-10 px-3"
+                  align="start"
+                />
               ) : null}
-              <ThemeToggle />
+              <div className="shrink-0">
+                <ThemeToggle />
+              </div>
             </div>
           </div>
 

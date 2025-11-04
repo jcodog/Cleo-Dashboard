@@ -12,7 +12,13 @@ import {
 import { client } from "@/lib/client";
 import { Servers } from "@/prisma/client";
 import { useMutation } from "@tanstack/react-query";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  startTransition,
+  useEffect,
+  useState,
+} from "react";
 import { toast } from "sonner";
 
 interface InviteLinkProps {
@@ -49,7 +55,9 @@ InviteLinkProps) => {
   });
 
   useEffect(() => {
-    setInviteLink(guild.inviteLink || undefined);
+    startTransition(() => {
+      setInviteLink(guild.inviteLink || undefined);
+    });
   }, [guild.inviteLink]);
 
   const isDisabled = inviteLink === initialInviteLink;
@@ -71,7 +79,7 @@ InviteLinkProps) => {
           placeholder="https://discord.com/invite/example"
           onChange={(e) => setInviteLink(e.target.value)}
         />
-        <Button disabled={isDisabled} type="submit" variant="gradient">
+        <Button disabled={isDisabled} type="submit" variant="glass">
           Save
         </Button>
       </form>
@@ -85,7 +93,7 @@ InviteLinkProps) => {
             <TooltipTrigger asChild>
               <span tabIndex={0}>
                 <Button
-                  variant="outline"
+                  variant="glass"
                   disabled={!canCreateInvite}
                   onClick={(e) => {
                     e.preventDefault();
