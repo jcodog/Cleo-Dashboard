@@ -19,7 +19,7 @@ export const ServerCard = ({
   const imageUrl = serverImage
     ? `https://cdn.discordapp.com/icons/${serverId}/${serverImage}.${
         serverImage.startsWith("a_") ? "gif" : "png"
-      }`
+      }?size=4096`
     : "https://cdn.cleoai.cloud/site-icons/guild-missing-icon.png";
 
   return (
