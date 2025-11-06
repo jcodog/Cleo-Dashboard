@@ -7,10 +7,8 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import UserButton from "@/components/UserButton";
 import { client } from "@/lib/client";
-import type {
-  KickEventName,
-  KickEventSubscriptionState,
-} from "@/lib/kick/events";
+import type { KickEventSubscriptionState } from "@/lib/kick/events";
+import type { EventNames } from "kick-api-types/payloads";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -18,13 +16,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
-interface KickSubscriptionsResponse {
+type KickSubscriptionsResponse = {
   events: KickEventSubscriptionState[];
-}
+};
 
 const KickDashboardPage = () => {
   const router = useRouter();
-  const [activeEvent, setActiveEvent] = useState<KickEventName | null>(null);
+  const [activeEvent, setActiveEvent] = useState<EventNames | null>(null);
 
   const {
     data,
@@ -65,7 +63,7 @@ const KickDashboardPage = () => {
   });
 
   const subscribeMutation = useMutation({
-    mutationFn: async (eventName: KickEventName) => {
+    mutationFn: async (eventName: EventNames) => {
       const res = await client.kick.subscribeEvent.$post({ event: eventName });
       const payload = await res.json().catch(() => null);
 
@@ -82,7 +80,7 @@ const KickDashboardPage = () => {
   });
 
   const unsubscribeMutation = useMutation({
-    mutationFn: async ({ event, id }: { event: KickEventName; id: string }) => {
+    mutationFn: async ({ event, id }: { event: EventNames; id: string }) => {
       const res = await client.kick.unsubscribeEvent.$post({ id });
       const payload = await res.json().catch(() => null);
 
@@ -243,7 +241,7 @@ const EventSubscriptionsPanel = ({
   isError: boolean;
   onRetry: () => Promise<unknown>;
   onToggle: (event: KickEventSubscriptionState) => Promise<void>;
-  activeEvent: KickEventName | null;
+  activeEvent: EventNames | null;
   isMutating: boolean;
   errorMessage: string;
 }) => (
@@ -290,7 +288,7 @@ const EventSubscriptionsPanel = ({
   </Panel>
 );
 
-const formatKickEventName = (name: KickEventName) =>
+const formatKickEventName = (name: EventNames) =>
   name
     .split(".")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
