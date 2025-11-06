@@ -1,94 +1,45 @@
 import { j, kickProcedure } from "@/server/jstack";
 import {
   KICK_SUPPORTED_EVENTS,
-  type KickEventName,
-  type KickEventSubscriptionState,
+  KickEventSubscriptionState,
 } from "@/lib/kick/events";
 import { ContentfulStatusCode } from "hono/utils/http-status";
-import { RESTError, RESTResult } from "kick-api-types/rest/v1";
+import {
+  RESTError,
+  RESTGetEventSubscriptionsResult,
+  RESTPostEventSubscriptionsBody,
+  RESTPostEventSubscriptionsResult,
+} from "kick-api-types/rest";
+import type { EventNames, EventSubscription } from "kick-api-types/payloads";
 import z from "zod";
 
-const isSupportedKickEvent = (value: string): value is KickEventName =>
-  KICK_SUPPORTED_EVENTS.includes(value as KickEventName);
+const KICK_API_BASE_URL = "https://api.kick.com/public/v1";
+const KICK_EVENTS_SUBSCRIPTIONS_URL =
+  KICK_API_BASE_URL + "/events/subscriptions";
+const KICK_EVENT_VERSION = 1;
 
-export interface EventSubscription {
-  app_id: string;
-  broadcaster_user_id: number;
-  created_at: string;
-  event: KickEventName;
-  id: string;
-  method: string;
-  updated_at: string;
-  version: number;
-}
+const isSupportedKickEvent = (value: EventNames): value is EventNames =>
+  KICK_SUPPORTED_EVENTS.includes(value);
 
-export type EventSubscriptions = EventSubscription[];
+const eventNameSchema = z.enum(
+  KICK_SUPPORTED_EVENTS as [EventNames, ...EventNames[]]
+);
 
-export interface EventSubscriptionResult {
-  error?: string;
-  name: KickEventName;
-  subscription_id?: string;
-  version: number;
-}
-
-export type EventSubscriptionResults = EventSubscriptionResult[];
-
-/**
- * @see {@link https://docs.kick.com/events/subscribe-to-events#get-events-subscriptions}
- */
-export type RESTGetEventSubscriptionsResult = RESTResult<EventSubscriptions>;
-
-/**
- * @see {@link https://docs.kick.com/events/subscribe-to-events#post-events-subscriptions}
- */
-export interface RESTPostEventSubscriptionsBody {
-  /**
-   * The ID of the broadcaster whose events you want to listen to.
-   */
-  broadcaster_user_id?: number;
-
-  /**
-   * An array of specific events to subscribe to.
-   *
-   * @see {@link https://docs.kick.com/events/event-types}
-   */
-  events: Array<{
-    /**
-     * The name of the event
-     */
-    name: KickEventName;
-
-    /**
-     * The version of the event
-     */
-    version: string;
-  }>;
-
-  /**
-   * The subscription method. Currently, only 'webhook' is supported.
-   */
-  method: "webhook";
-}
-
-/**
- * @see {@link https://docs.kick.com/events/subscribe-to-events#post-events-subscriptions}
- */
-export type RESTPostEventSubscriptionsResult =
-  RESTResult<EventSubscriptionResults>;
-
-/**
- * OK result returns 204
- *
- * @see {@link https://docs.kick.com/events/subscribe-to-events#delete-events-subscriptions}
- */
-export type RESTDeleteEventSubscriptionsResult = never;
+const parseKickErrorMessage = async (response: Response): Promise<string> => {
+  try {
+    const payload = (await response.json()) as Partial<RESTError> | null;
+    return payload?.message ?? `Kick API responded with ${response.status}`;
+  } catch {
+    return response.statusText || `Kick API responded with ${response.status}`;
+  }
+};
 
 export const kickRouter = j.router({
   subscribedEvents: kickProcedure.query(async ({ c, ctx }) => {
     let res: Response;
 
     try {
-      res = await fetch("https://api.kick.com/public/v1/events/subscriptions", {
+      res = await fetch(KICK_EVENTS_SUBSCRIPTIONS_URL, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${ctx.accessToken}`,
@@ -102,22 +53,15 @@ export const kickRouter = j.router({
     }
 
     if (!res.ok) {
-      let errored: RESTError | null = null;
-      try {
-        errored = (await res.json()) as RESTError;
-      } catch {
-        errored = null;
-      }
-
       return c.json(
-        { message: errored?.message ?? "Failed to load Kick subscriptions" },
+        { message: await parseKickErrorMessage(res) },
         { status: res.status as ContentfulStatusCode }
       );
     }
 
     const events = (await res.json()) as RESTGetEventSubscriptionsResult;
 
-    const lookups = new Map<string, EventSubscription>();
+    const lookups = new Map<EventNames, EventSubscription>();
     for (const subscription of events.data ?? []) {
       if (!subscription?.event) continue;
       if (!isSupportedKickEvent(subscription.event)) continue;
@@ -141,47 +85,40 @@ export const kickRouter = j.router({
   subscribeEvent: kickProcedure
     .input(
       z.object({
-        event: z
-          .string()
-          .refine(
-            (value): value is KickEventName => isSupportedKickEvent(value),
-            {
-              message: "Unsupported Kick event",
-            }
-          ),
+        event: eventNameSchema,
       })
     )
     .mutation(async ({ c, ctx, input }) => {
-      const broadcasterId = Number.parseInt(ctx.accountId ?? "", 10);
       const body: RESTPostEventSubscriptionsBody = {
         events: [
           {
-            name: input.event as KickEventName,
-            version: "1",
+            name: input.event,
+            // @ts-expect-error Kick API expects a numeric version but the published types require a string
+            version: KICK_EVENT_VERSION,
           },
         ],
         method: "webhook",
       };
 
-      if (Number.isFinite(broadcasterId)) {
+      const broadcasterId = ctx.accountId
+        ? Number.parseInt(ctx.accountId, 10)
+        : Number.NaN;
+      if (Number.isInteger(broadcasterId) && broadcasterId > 0) {
         body.broadcaster_user_id = broadcasterId;
       }
 
       let res: Response;
 
       try {
-        res = await fetch(
-          "https://api.kick.com/public/v1/events/subscriptions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${ctx.accessToken}`,
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify(body),
-          }
-        );
+        res = await fetch(KICK_EVENTS_SUBSCRIPTIONS_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${ctx.accessToken}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(body),
+        });
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to reach Kick API";
@@ -191,18 +128,10 @@ export const kickRouter = j.router({
       let payload: RESTPostEventSubscriptionsResult | null = null;
 
       if (!res.ok) {
-        try {
-          const errored = (await res.json()) as RESTError;
-          return c.json(
-            { message: errored.message },
-            { status: res.status as ContentfulStatusCode }
-          );
-        } catch {
-          return c.json(
-            { message: "Failed to subscribe to Kick event" },
-            { status: res.status as ContentfulStatusCode }
-          );
-        }
+        return c.json(
+          { message: await parseKickErrorMessage(res) },
+          { status: res.status as ContentfulStatusCode }
+        );
       }
 
       try {
@@ -211,18 +140,16 @@ export const kickRouter = j.router({
         payload = null;
       }
 
-      const event = payload?.data?.find(
-        (item) => item.name === input.event
-      ) ?? {
-        name: input.event,
-        subscription_id: undefined,
-        version: 1,
-      };
+      const event = payload?.data?.find((item) => item.name === input.event);
 
       return c.json(
         {
           message: payload?.message ?? "Subscribed to Kick event",
-          event,
+          event: event ?? {
+            name: input.event,
+            subscription_id: undefined,
+            version: KICK_EVENT_VERSION,
+          },
         },
         { status: 200 }
       );
@@ -238,16 +165,16 @@ export const kickRouter = j.router({
       let res: Response;
 
       try {
-        res = await fetch(
-          `https://api.kick.com/public/v1/events/subscriptions?id=${input.id}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${ctx.accessToken}`,
-              Accept: "application/json",
-            },
-          }
-        );
+        const url = new URL(KICK_EVENTS_SUBSCRIPTIONS_URL);
+        url.searchParams.set("id", input.id);
+
+        res = await fetch(url.toString(), {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${ctx.accessToken}`,
+            Accept: "application/json",
+          },
+        });
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to reach Kick API";
@@ -255,15 +182,8 @@ export const kickRouter = j.router({
       }
 
       if (!res.ok) {
-        let errored: RESTError | null = null;
-        try {
-          errored = (await res.json()) as RESTError;
-        } catch {
-          errored = null;
-        }
-
         return c.json(
-          { message: errored?.message ?? "Failed to unsubscribe from event" },
+          { message: await parseKickErrorMessage(res) },
           { status: res.status as ContentfulStatusCode }
         );
       }

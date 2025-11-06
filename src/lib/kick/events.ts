@@ -1,4 +1,6 @@
-export const KICK_SUPPORTED_EVENTS = [
+import { EventNames } from "kick-api-types/payloads";
+
+export const KICK_SUPPORTED_EVENTS: EventNames[] = [
   "channel.followed",
   "channel.subscription.renewal",
   "channel.subscription.gifts",
@@ -8,10 +10,8 @@ export const KICK_SUPPORTED_EVENTS = [
   "chat.message.sent",
 ] as const;
 
-export type KickEventName = (typeof KICK_SUPPORTED_EVENTS)[number];
-
 export interface KickEventSubscriptionState {
-  name: KickEventName;
+  name: EventNames;
   subscribed: boolean;
   subscriptionId: string | null;
 }
