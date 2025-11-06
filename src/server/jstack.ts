@@ -294,8 +294,15 @@ const kickMiddleware = j.middleware(async ({ c, ctx, next }) => {
     });
   }
 
+  if (!account.accessToken) {
+    throw new HTTPException(401, {
+      message: "Unauthorized: Kick access token missing",
+    });
+  }
+
   return next({
     accessToken: account.accessToken,
+    accountId: account.accountId ?? null,
   });
 });
 
