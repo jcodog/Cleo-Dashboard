@@ -7,6 +7,7 @@ import { dashRouter } from "@/server/routers/dash-router";
 import { paymentRouter } from "@/server/routers/payment-router";
 import { healthRouter } from "@/server/routers/health-router";
 import { accountsRouter } from "@/server/routers/accounts-router";
+import { kickRouter } from "@/server/routers/kick-router";
 
 /**
  * This is your base API.
@@ -86,6 +87,7 @@ const appRouter = j.mergeRouters(api, {
   payment: paymentRouter,
   health: healthRouter,
   accounts: accountsRouter,
+  kick: kickRouter,
 });
 
 export type AppRouter = typeof appRouter;
