@@ -7,7 +7,6 @@ export const KICK_SUPPORTED_EVENTS: EventNames[] = [
   "channel.subscription.new",
   "livestream.status.updated",
   "kicks.gifted",
-  "chat.message.sent",
 ] as const;
 
 export interface KickEventSubscriptionState {
