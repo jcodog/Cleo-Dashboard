@@ -61,7 +61,7 @@ export interface RESTPostEventSubscriptionsBody {
     /**
      * The version of the event
      */
-    version: string;
+    version: number;
   }>;
 
   /**
@@ -152,20 +152,15 @@ export const kickRouter = j.router({
       })
     )
     .mutation(async ({ c, ctx, input }) => {
-      const broadcasterId = Number.parseInt(ctx.accountId ?? "", 10);
       const body: RESTPostEventSubscriptionsBody = {
         events: [
           {
             name: input.event as KickEventName,
-            version: "1",
+            version: 1,
           },
         ],
         method: "webhook",
       };
-
-      if (Number.isFinite(broadcasterId)) {
-        body.broadcaster_user_id = broadcasterId;
-      }
 
       let res: Response;
 

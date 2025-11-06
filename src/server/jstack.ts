@@ -296,7 +296,6 @@ const kickMiddleware = j.middleware(async ({ c, ctx, next }) => {
 
   return next({
     accessToken: account.accessToken,
-    accountId: account.accountId,
   });
 });
 
