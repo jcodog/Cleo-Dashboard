@@ -277,6 +277,29 @@ const dashMiddleware = j.middleware(async ({ c, ctx, next }) => {
   return next({ user: appUser, accessToken });
 });
 
+const kickMiddleware = j.middleware(async ({ c, ctx, next }) => {
+  const { db, session } = ctx as InferMiddlewareOutput<typeof baseMiddleware> &
+    InferMiddlewareOutput<typeof authMiddleware>;
+
+  const account = await db.account.findFirst({
+    where: {
+      userId: session.user.id,
+      providerId: "kick",
+    },
+  });
+
+  if (!account) {
+    throw new HTTPException(401, {
+      message: "Unauthorized: No auth user account for kick",
+    });
+  }
+
+  return next({
+    accessToken: account.accessToken,
+    accountId: account.accountId,
+  });
+});
+
 /**
  * Public (unauthenticated) procedures
  *
@@ -303,3 +326,5 @@ export const botProcedure = publicProcedure.use(botMiddleware);
  * This is used as the method to accurately link the request to a user record in the database.
  */
 export const dashProcedure = authProcedure.use(dashMiddleware);
+
+export const kickProcedure = authProcedure.use(kickMiddleware);
