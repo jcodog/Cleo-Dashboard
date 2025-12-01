@@ -1,9 +1,8 @@
 "use client";
 
-import { client } from "@/lib/client";
-import { useWebSocket } from "jstack/client";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { SiKick, SiTwitch } from "react-icons/si";
+import { io, type Socket } from "socket.io-client";
 
 type IncomingChatMessage = {
   roomId: string;
@@ -28,32 +27,37 @@ const generateMessageId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-const socket = client.overlays.chat.$ws();
+const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? "";
 
 const ChatOverlay = ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = use(params);
-  console.log(id);
   const roomId = `overlay-chat-${id}`;
-  console.log(roomId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  useWebSocket(socket, {
-    message: (msg: IncomingChatMessage) => {
-      if (msg.roomId !== roomId) {
-        console.log("Invalid room id", msg.roomId);
-      }
+  useEffect(() => {
+    const socket: Socket = io(socketUrl, {
+      transports: ["websocket"],
+      query: { roomId },
+    });
+
+    const handler = (msg: IncomingChatMessage) => {
+      if (msg.roomId !== roomId) return;
+
+      console.log(msg);
 
       setMessages((prev) => {
-        const nextMessage: ChatMessage = {
-          ...msg,
-          localId: generateMessageId(),
-        };
-
+        const nextMessage = { ...msg, localId: generateMessageId() };
         const next = [...prev, nextMessage];
         return next.length > MAX_MESSAGES ? next.slice(-MAX_MESSAGES) : next;
       });
-    },
-  });
+    };
+
+    socket.on("chat:message", handler);
+    return () => {
+      socket.off("chat:message", handler);
+      socket.disconnect();
+    };
+  }, [roomId]);
 
   return (
     <div className="w-full h-full flex flex-col justify-end p-4 gap-2">
