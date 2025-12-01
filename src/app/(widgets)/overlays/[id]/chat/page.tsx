@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { SiKick, SiTwitch } from "react-icons/si";
 import { io, type Socket } from "socket.io-client";
 
@@ -29,32 +29,11 @@ const generateMessageId = () => {
 };
 
 const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? "";
-const KICK_AVATAR_PROXY_PATH = "/api/proxy/kick-avatar?url=";
-const KICK_AVATAR_HOST = "files.kick.com";
 
 const ChatOverlay = ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = use(params);
   const roomId = `overlay-chat-${id}`;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-
-  const resolveAvatarSrc = useCallback((message: IncomingChatMessage) => {
-    if (!message.avatarUrl) return null;
-
-    let hostname: string | null = null;
-    try {
-      hostname = new URL(message.avatarUrl).hostname;
-    } catch {
-      hostname = null;
-    }
-
-    if (hostname === KICK_AVATAR_HOST) {
-      return `${KICK_AVATAR_PROXY_PATH}${encodeURIComponent(
-        message.avatarUrl
-      )}`;
-    }
-
-    return message.avatarUrl;
-  }, []);
 
   useEffect(() => {
     const socket: Socket = io(socketUrl, {
@@ -83,35 +62,32 @@ const ChatOverlay = ({ params }: { params: Promise<{ id: string }> }) => {
 
   return (
     <div className="w-full h-full flex flex-col justify-end p-4 gap-2">
-      {messages.map((m) => {
-        const avatarSrc = resolveAvatarSrc(m);
-        return (
-          <div
-            key={m.localId}
-            className="rounded-xl bg-black/70 px-3 py-2 backdrop-blur flex gap-3 items-center chat-pop-in"
-          >
-            {m.platform === "kick" ? (
-              <SiKick className="text-green-400 text-xl shrink-0" />
-            ) : m.platform === "twitch" ? (
-              <SiTwitch className="text-purple-400 text-xl shrink-0" />
-            ) : null}
+      {messages.map((m) => (
+        <div
+          key={m.localId}
+          className="rounded-xl bg-black/70 px-3 py-2 backdrop-blur flex gap-3 items-center chat-pop-in"
+        >
+          {m.platform === "kick" ? (
+            <SiKick className="text-green-400 text-xl shrink-0" />
+          ) : m.platform === "twitch" ? (
+            <SiTwitch className="text-purple-400 text-xl shrink-0" />
+          ) : null}
 
-            {avatarSrc && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarSrc}
-                alt={m.author}
-                className="size-8 rounded-full object-cover"
-              />
-            )}
+          {m.avatarUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={m.avatarUrl}
+              alt={m.author}
+              className="size-8 rounded-full object-cover"
+            />
+          )}
 
-            <div className="flex flex-col text-white">
-              <span className="font-semibold text-sm">{m.author}</span>
-              <span className="text-sm">{m.text}</span>
-            </div>
+          <div className="flex flex-col text-white">
+            <span className="font-semibold text-sm">{m.author}</span>
+            <span className="text-sm">{m.text}</span>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 };
