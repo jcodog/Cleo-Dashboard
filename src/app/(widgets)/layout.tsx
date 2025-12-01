@@ -7,7 +7,7 @@ import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { CookieBanner } from "@/components/CookieBanner";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { PreReleaseBanner } from "../components/PreReleaseBanner";
+import { PreReleaseBanner } from "../../components/PreReleaseBanner";
 // Temp: Remove databuddy until can figure out and fix the weird error about package sub dependencies
 import { Databuddy } from "@databuddy/sdk/react";
 
@@ -64,47 +64,21 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="h-dvh w-full flex flex-col overflow-hidden antialiased">
-        <PreReleaseBanner />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <JStackProvider>
-            {children}
-            <Databuddy
-              clientId="kYvU4Eddh8RzHScTlZ3Pj"
-              trackScreenViews={true}
-              trackPerformance={true}
-              trackWebVitals={true}
-              trackErrors={true}
-              trackSessions={true}
-              trackOutgoingLinks={true}
-              trackScrollDepth={true}
-              trackEngagement={true}
-              enableBatching={true}
-              trackBounceRate={true}
-              trackAttributes={true}
-              trackExitIntent={true}
-              trackHashChanges={true}
-              trackInteractions={true}
-            />
-            <Toaster
-              richColors
-              position="top-right"
-              visibleToasts={3}
-              duration={5000}
-              closeButton
-              icons={{
-                info: <Info />,
-                success: <CircleCheck />,
-                error: <CircleAlert />,
-              }}
-            />
-            <CookieBanner />
-          </JStackProvider>
-        </ThemeProvider>
+        <JStackProvider>
+          {children}
+          <Databuddy
+            clientId="kYvU4Eddh8RzHScTlZ3Pj"
+            trackPerformance={true}
+            trackWebVitals={true}
+            trackErrors={true}
+            trackOutgoingLinks={true}
+            trackScrollDepth={true}
+            enableBatching={true}
+            trackAttributes={true}
+            trackHashChanges={true}
+            trackInteractions={true}
+          />
+        </JStackProvider>
         <Analytics />
         <SpeedInsights />
       </body>
