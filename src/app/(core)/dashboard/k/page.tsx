@@ -6,6 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import UserButton from "@/components/UserButton";
 import { client } from "@/lib/client";
 import type { KickEventSubscriptionState } from "@/lib/kick/events";
@@ -436,6 +442,7 @@ const ChatOverlayHelper = ({
             </Button>
           </div>
         </div>
+        <SearchParamHints baseUrl={overlayUrl} />
         <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/90">
           <p className="font-semibold text-white">Recommended OBS setup</p>
           <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-white/80">
@@ -589,3 +596,94 @@ const Placeholder = () => (
 );
 
 export default KickDashboardPage;
+
+const SearchParamHints = ({ baseUrl }: { baseUrl: string }) => {
+  const presetUrl = `${baseUrl}?direction=down&mode=fade&duration=8`;
+  const [isCopyingPreset, setIsCopyingPreset] = useState(false);
+
+  const handleCopyPreset = useCallback(async () => {
+    setIsCopyingPreset(true);
+    try {
+      await copyTextToClipboard(presetUrl);
+      toast.success("Preset URL copied");
+    } catch (error) {
+      console.error("[kick-overlay] preset copy failed", error);
+      toast.error("Unable to copy preset URL");
+    } finally {
+      setIsCopyingPreset(false);
+    }
+  }, [presetUrl]);
+
+  return (
+    <Accordion
+      type="single"
+      collapsible
+      className="rounded-2xl border border-white/10 bg-white/5 px-4"
+    >
+      <AccordionItem value="overlay-options" className="border-none">
+        <AccordionTrigger className="px-0 text-left">
+          <div>
+            <p className="text-sm font-semibold text-white">Overlay options</p>
+            <p className="text-xs text-muted-foreground">
+              Optional search params for direction + fade timing.
+            </p>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="px-0">
+          <div className="space-y-3 pt-0 text-xs text-white/90">
+            <p className="text-muted-foreground">
+              Append the parameters below when you want to change how chat
+              messages stack or how long they stay on screen.
+            </p>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>
+                <span className="font-semibold text-white/90">direction</span>:
+                `up` (default) stacks from the bottom; `down` anchors at the
+                top.
+              </li>
+              <li>
+                <span className="font-semibold text-white/90">mode</span>:
+                `persist` keeps every message visible (default); `fade` hides
+                them after `duration` seconds.
+              </li>
+              <li>
+                <span className="font-semibold text-white/90">duration</span>:
+                Seconds before fading when `mode=fade` (default 6, decimals OK).
+              </li>
+            </ul>
+            <div className="space-y-2">
+              <p className="uppercase text-white/60 tracking-[0.2em] text-[11px]">
+                Example (fade down)
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={presetUrl}
+                  readOnly
+                  className="bg-black/40 font-mono text-[11px] text-white/90"
+                />
+                <Button
+                  variant="glass"
+                  size="sm"
+                  className="sm:w-32"
+                  disabled={isCopyingPreset}
+                  onClick={() => {
+                    void handleCopyPreset();
+                  }}
+                >
+                  {isCopyingPreset ? (
+                    <span className="flex items-center gap-2 text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Copying...
+                    </span>
+                  ) : (
+                    "Copy Preset"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+};
