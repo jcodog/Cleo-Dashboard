@@ -32,12 +32,16 @@ const socket = client.overlays.chat.$ws();
 
 const ChatOverlay = ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = use(params);
+  console.log(id);
   const roomId = `overlay-chat-${id}`;
+  console.log(roomId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   useWebSocket(socket, {
     message: (msg: IncomingChatMessage) => {
-      if (msg.roomId !== roomId) return;
+      if (msg.roomId !== roomId) {
+        console.log("Invalid room id", msg.roomId);
+      }
 
       setMessages((prev) => {
         const nextMessage: ChatMessage = {
