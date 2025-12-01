@@ -3,6 +3,7 @@
 import { Heading } from "@/components/Heading";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import UserButton from "@/components/UserButton";
@@ -13,16 +14,37 @@ import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
+import type { LinkedAccountsData } from "@/hooks/useLinkedAccounts";
 
 type KickSubscriptionsResponse = {
   events: KickEventSubscriptionState[];
 };
 
+type KickLinkedProvidersResponse = Pick<
+  LinkedAccountsData,
+  "user" | "providers"
+>;
+
+const CHAT_EVENT_PRIMARY: EventNames = "chat.message.sent";
+const CHAT_EVENT_FALLBACK = "chat.message" as EventNames;
+const OBS_OVERLAY_DIMENSIONS = { width: 420, height: 900 } as const;
+const SITE_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL
+  ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")
+  : null;
+
 const KickDashboardPage = () => {
   const router = useRouter();
   const [activeEvent, setActiveEvent] = useState<EventNames | null>(null);
+  const [browserOrigin, setBrowserOrigin] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (SITE_BASE_URL) return;
+    if (typeof window === "undefined") return;
+    setBrowserOrigin(window.location.origin.replace(/\/$/, ""));
+  }, []);
 
   const {
     data,
@@ -31,14 +53,12 @@ const KickDashboardPage = () => {
     refetch: refetchLinkedProviders,
   } = useQuery({
     queryKey: ["kick-dashboard-status"],
-    queryFn: async () => {
+    queryFn: async (): Promise<KickLinkedProvidersResponse> => {
       const res = await client.accounts.linkedProviders.$get();
       if (!res.ok) {
         throw new Error("Failed to load Kick account status");
       }
-      return res.json() as Promise<{
-        providers: { kick: { linked: boolean } };
-      }>;
+      return res.json() as Promise<KickLinkedProvidersResponse>;
     },
     staleTime: 15_000,
   });
@@ -135,6 +155,10 @@ const KickDashboardPage = () => {
   );
 
   const kickSubscriptions = eventsQuery.data?.events ?? [];
+  const chatEvent =
+    kickSubscriptions.find((event) => event.name === CHAT_EVENT_PRIMARY) ??
+    kickSubscriptions.find((event) => event.name === CHAT_EVENT_FALLBACK);
+  const isChatEventSubscribed = Boolean(chatEvent?.subscribed);
 
   const isMutating =
     subscribeMutation.isPending || unsubscribeMutation.isPending;
@@ -143,6 +167,19 @@ const KickDashboardPage = () => {
     eventsQuery.error instanceof Error
       ? eventsQuery.error.message
       : "Failed to load Kick subscriptions";
+
+  const kickId = data?.user.kickId ?? null;
+  const overlayUrl = useMemo(() => {
+    if (!kickId) return null;
+    const base = SITE_BASE_URL ?? browserOrigin;
+    if (!base) {
+      return `/overlays/${kickId}/chat`;
+    }
+    return `${base}/overlays/${kickId}/chat`;
+  }, [browserOrigin, kickId]);
+  const requiredEventLabel = formatKickEventName(
+    chatEvent?.name ?? CHAT_EVENT_PRIMARY
+  );
 
   if (isLoading) {
     return (
@@ -178,6 +215,10 @@ const KickDashboardPage = () => {
     );
   }
 
+  if (!data) {
+    return null;
+  }
+
   return (
     <section className="container mx-auto flex h-full flex-col gap-6 p-6 pb-16 min-h-dvh">
       <Header onBack={() => router.push("/dashboard")} />
@@ -192,6 +233,14 @@ const KickDashboardPage = () => {
             activeEvent={activeEvent}
             isMutating={isMutating}
             errorMessage={subscriptionErrorMessage}
+          />
+          <ChatOverlayHelper
+            overlayUrl={overlayUrl}
+            kickId={kickId}
+            isChatEventSubscribed={isChatEventSubscribed}
+            requiredEventLabel={requiredEventLabel}
+            dimensions={OBS_OVERLAY_DIMENSIONS}
+            isEventsLoading={eventsQuery.isLoading}
           />
           <Placeholder />
         </div>
@@ -293,6 +342,167 @@ const formatKickEventName = (name: EventNames) =>
     .split(".")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" · ");
+
+const ChatOverlayHelper = ({
+  overlayUrl,
+  kickId,
+  isChatEventSubscribed,
+  requiredEventLabel,
+  dimensions,
+  isEventsLoading,
+}: {
+  overlayUrl: string | null;
+  kickId: string | null;
+  isChatEventSubscribed: boolean;
+  requiredEventLabel: string;
+  dimensions: { width: number; height: number };
+  isEventsLoading: boolean;
+}) => {
+  const [isCopying, setIsCopying] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    if (!overlayUrl) return;
+    setIsCopying(true);
+    try {
+      await copyTextToClipboard(overlayUrl);
+      toast.success("Overlay URL copied");
+    } catch (error) {
+      console.error("[kick-overlay] copy failed", error);
+      toast.error("Unable to copy overlay URL");
+    } finally {
+      setIsCopying(false);
+    }
+  }, [overlayUrl]);
+
+  let content: ReactNode;
+
+  if (isEventsLoading) {
+    content = (
+      <div className="flex items-center justify-center rounded-xl border border-white/10 bg-white/5 py-10 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+      </div>
+    );
+  } else if (!kickId) {
+    content = (
+      <OverlayInfo
+        title="Kick ID required"
+        description="We need your Kick channel ID to generate overlay URLs. Re-link your Kick account from the main dashboard."
+      />
+    );
+  } else if (!isChatEventSubscribed) {
+    content = (
+      <OverlayInfo
+        title="Enable chat subscriptions"
+        description={`Turn on ${requiredEventLabel} to unlock the chat overlay.`}
+      />
+    );
+  } else if (!overlayUrl) {
+    content = (
+      <OverlayInfo
+        title="Overlay URL pending"
+        description="Hold tight while we detect your dashboard origin. Refresh if this persists."
+      />
+    );
+  } else {
+    content = (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-white/60">
+            Browser source URL
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={overlayUrl}
+              readOnly
+              className="bg-black/40 font-mono text-xs text-white/90"
+            />
+            <Button
+              variant="glass"
+              size="sm"
+              className="sm:w-32"
+              disabled={isCopying}
+              onClick={() => {
+                void handleCopy();
+              }}
+            >
+              {isCopying ? (
+                <span className="flex items-center gap-2 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Copying...
+                </span>
+              ) : (
+                "Copy URL"
+              )}
+            </Button>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/90">
+          <p className="font-semibold text-white">Recommended OBS setup</p>
+          <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-white/80">
+            <li>Sources -&gt; Browser -&gt; Create new.</li>
+            <li>
+              Paste the URL above and enable &ldquo;Control audio via OBS&rdquo;
+              if needed.
+            </li>
+            <li>
+              Set width to {dimensions.width}px and height to{" "}
+              {dimensions.height}px for a vertical rectangle.
+            </li>
+            <li>Position the browser source and lock it in place.</li>
+          </ol>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/70 p-6 text-sm text-muted-foreground space-y-4">
+      <div>
+        <p className="text-base font-semibold text-white">Chat overlay</p>
+        <p>Drop this overlay into OBS once chat events are enabled.</p>
+      </div>
+      {content}
+    </div>
+  );
+};
+
+const OverlayInfo = ({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) => (
+  <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-5 text-sm text-white/90">
+    <p className="font-semibold text-white">{title}</p>
+    <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+  </div>
+);
+
+const copyTextToClipboard = async (value: string) => {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  if (typeof document === "undefined") {
+    throw new Error("Clipboard unavailable");
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const successful = document.execCommand("copy");
+  document.body.removeChild(textarea);
+
+  if (!successful) {
+    throw new Error("Copy command failed");
+  }
+};
 
 const EventRow = ({
   event,
