@@ -22,6 +22,8 @@ export interface Env {
     COOKIE_DOMAIN: string;
     KICK_CLIENT_ID: string;
     KICK_CLIENT_SECRET: string;
+    UPSTASH_REDIS_REST_URL: string;
+    UPSTASH_REDIS_REST_TOKEN: string;
   };
 }
 

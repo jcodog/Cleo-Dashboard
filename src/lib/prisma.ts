@@ -1,9 +1,9 @@
-import { PrismaClient } from "@/prisma/edge";
+import { PrismaClient } from "@/prisma/client";
 import { withAccelerate } from "@prisma/extension-accelerate";
 
 // Helper to instantiate a PrismaClient extended with accelerate
 function createDbClient(url: string) {
-  return new PrismaClient({ datasourceUrl: url }).$extends(withAccelerate());
+  return new PrismaClient({ accelerateUrl: url }).$extends(withAccelerate());
 }
 export type DbClient = ReturnType<typeof createDbClient>;
 

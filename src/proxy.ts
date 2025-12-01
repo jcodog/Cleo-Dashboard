@@ -48,6 +48,7 @@ const PUBLIC_PATHS: RegExp[] = [
   /^\/sign-up(.*)$/,
   /^\/policies(.*)$/,
   /^\/webhooks(.*)$/,
+  /^\/overlays(.*)$/,
   /^\/api\/auth(.*)$/, // Better Auth internal endpoints must be public
 ];
 
