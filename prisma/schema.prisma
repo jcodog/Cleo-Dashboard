@@ -7,63 +7,21 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Plans {
-  FREE
-  PREMIUM // 0 premium server included. 500 ai messages a day.
-  PREMIUMPLUS // 1 premium server included. 1000 ai messages a day.
-  PRO // 3 premium servers included. 1500 ai messages a day.
-}
-
-enum LogLevel {
-  NONE // no logging at all
-  MINIMAL // only moderator commands like ban and kick
-  MEDIUM // included deleted messages and join/leave
-  MAXIMUM // include edited messages and user updates (username, role etc.)
-}
-
-enum Sources {
-  DISCORD
-  DASHBOARD
-}
-
-enum IncidentsType {
-  WARN
-  KICK
-  BAN
-}
-
-enum IncidentsStatus {
-  OPEN
-  APPEALED
-  CLOSED
-  REVOKED
-}
-
-enum Role {
-  staff
-  user
-}
-
-enum ProductType {
-  onetime
-  subscription
-}
-
 model Users {
   id                   String                @id @default(cuid())
   username             String                @unique
   email                String?               @unique
   extId                String?               @unique
   discordId            String?               @unique
-  discordUsername      String?
-  kickId               String?               @unique
-  kickUsername         String?
+  plan                 Plans                 @default(FREE)
   role                 Role                  @default(user)
   customerId           String?               @unique
   timezone             String?
-  premiumSubscriptions PremiumSubscriptions?
-  plan                 Plans                 @default(FREE)
+  discordUsername      String?
+  kickId               String?               @unique
+  kickUsername         String?
   limits               Limits?
+  premiumSubscriptions PremiumSubscriptions?
   premiumServers       Servers[]
 }
 
@@ -79,46 +37,46 @@ model Limits {
 }
 
 model Servers {
-  id                  String                @id
+  id                  String               @id
   name                String
   ownerId             String
-  icon                String?
-  isPremium           Boolean               @default(false)
+  isPremium           Boolean              @default(false)
   premiumAddedBy      String?
-  premiumUser         Users?                @relation(fields: [premiumAddedBy], references: [discordId], onDelete: SetNull)
-  aiEnabled           Boolean               @default(false)
+  aiEnabled           Boolean              @default(false)
   welcomeChannel      String?
   announcementChannel String?
   updatesChannel      String?
   logsChannel         String?
-  logLevel            LogLevel              @default(NONE)
-  inviteLink          String?
+  logLevel            LogLevel             @default(NONE)
   inviteCode          String?
+  inviteLink          String?
+  icon                String?
   lastOpened          DateTime?
-  cleoPersonalityName String?
   cleoPersonalityId   String?
-  AutomodConfig       AutomodConfig[]
-  ServerSubscriptions ServerSubscriptions[]
+  cleoPersonalityName String?
+  AutomodConfig       AutomodConfig?
+  ServerSubscriptions ServerSubscriptions?
+  premiumUser         Users?               @relation(fields: [premiumAddedBy], references: [discordId])
 
   @@index([lastOpened])
 }
 
 model PremiumSubscriptions {
   id        String   @id
-  user      Users    @relation(fields: [id], references: [id], onDelete: Cascade)
   tier      Plans
   startDate DateTime @default(now())
-  endDate   DateTime @default(dbgenerated("CURRENT_TIMESTAMP + INTERVAL '1 month'"))
+  endDate   DateTime @default(dbgenerated("(CURRENT_TIMESTAMP + '1 mon'::interval)"))
   source    Sources
+  user      Users    @relation(fields: [id], references: [id], onDelete: Cascade)
 }
 
 model ServerSubscriptions {
   id             String   @id
-  server         Servers  @relation(fields: [id], references: [id])
   startDate      DateTime @default(now())
-  endDate        DateTime @default(dbgenerated("CURRENT_TIMESTAMP + INTERVAL '1 month'"))
+  endDate        DateTime @default(dbgenerated("(CURRENT_TIMESTAMP + '1 mon'::interval)"))
   source         Sources
   subscriptionId String
+  server         Servers  @relation(fields: [id], references: [id])
 }
 
 model ErrorLog {
@@ -126,7 +84,9 @@ model ErrorLog {
   process    String
   message    String
   stackTrace String?
-  timestamp  DateTime @default(now())
+  context    String?
+  createdAt  DateTime @default(now())
+  status     Int?
 }
 
 model Incidents {
@@ -141,14 +101,14 @@ model Incidents {
 }
 
 model Products {
-  id     String      @id // The stripe product id
+  id     String      @id
   name   String      @unique
   type   ProductType
   prices Prices[]
 }
 
 model Prices {
-  id        String   @id // The stripe price id
+  id        String   @id
   amount    Int
   default   Boolean  @default(false)
   productId String
@@ -180,30 +140,26 @@ model Testimonials {
 }
 
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-
+  id              String    @id
+  name            String
+  email           String    @unique
+  emailVerified   Boolean   @default(false)
+  image           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
   lastLoginMethod String?
+  locale          String?
+  username        String?   @unique
+  accounts        Account[]
+  sessions        Session[]
 
-  username String?
-  locale   String?
-
-  @@unique([email])
-  @@unique([username])
   @@map("user")
 }
 
 model Session {
   id        String   @id
   expiresAt DateTime
-  token     String
+  token     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
@@ -211,7 +167,6 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([token])
   @@map("session")
 }
 
@@ -220,7 +175,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -230,6 +184,7 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("account")
 }
@@ -243,4 +198,46 @@ model Verification {
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
+}
+
+enum Plans {
+  FREE
+  PREMIUM
+  PREMIUMPLUS
+  PRO
+}
+
+enum LogLevel {
+  NONE
+  MINIMAL
+  MEDIUM
+  MAXIMUM
+}
+
+enum Sources {
+  DISCORD
+  DASHBOARD
+}
+
+enum IncidentsType {
+  WARN
+  KICK
+  BAN
+}
+
+enum IncidentsStatus {
+  OPEN
+  APPEALED
+  CLOSED
+  REVOKED
+}
+
+enum Role {
+  staff
+  user
+}
+
+enum ProductType {
+  onetime
+  subscription
 }
