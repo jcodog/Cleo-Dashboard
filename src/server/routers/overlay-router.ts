@@ -20,6 +20,7 @@ export const overlayRouter = j.router({
     .ws(({ io }) => ({
       async onConnect({ socket }) {
         socket.on("message", async (message) => {
+          console.log("Chat message", JSON.stringify(message));
           await io.to(message.roomId).emit("message", message);
         });
       },
