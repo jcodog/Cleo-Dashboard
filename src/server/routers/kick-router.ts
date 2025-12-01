@@ -93,7 +93,6 @@ export const kickRouter = j.router({
         events: [
           {
             name: input.event,
-            // @ts-expect-error Kick API expects a numeric version but the published types require a string
             version: KICK_EVENT_VERSION,
           },
         ],
