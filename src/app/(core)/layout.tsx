@@ -1,14 +1,11 @@
-import "@/styles/globals.css";
-import type { Metadata } from "next";
+import { CookieBanner } from "@/components/CookieBanner";
 import { JStackProvider } from "@/components/providers/jstack";
 import { ThemeProvider } from "@/components/providers/theme";
 import { Toaster } from "@/components/ui/sonner";
+import "@/styles/globals.css";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
-import { CookieBanner } from "@/components/CookieBanner";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import type { Metadata } from "next";
 import { PreReleaseBanner } from "../../components/PreReleaseBanner";
-// Temp: Remove databuddy until can figure out and fix the weird error about package sub dependencies
 import { Databuddy } from "@databuddy/sdk/react";
 
 export const metadata: Metadata = {
@@ -100,8 +97,6 @@ export default function RootLayout({
             <CookieBanner />
           </JStackProvider>
         </ThemeProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

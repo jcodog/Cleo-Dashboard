@@ -1,30 +1,34 @@
+import { Prisma } from "@/prisma/client";
 import { dashProcedure, j } from "@/server/jstack";
 import z from "zod";
 
+type ProductWithPrices = Prisma.ProductsGetPayload<{
+  include: { prices: true };
+}>;
+
 export const paymentRouter = j.router({
   additionalMessageBundles: dashProcedure.query(async ({ c, ctx: { db } }) => {
-    const product = await db.products.findFirst({
+    const product = (await db.products.findFirst({
       where: {
-        AND: {
-          name: "Cleo AI Additional Messages",
-          type: "onetime",
-        },
+        name: "Cleo AI Additional Messages",
+        type: "onetime",
       },
       include: {
         prices: true,
       },
-    });
+    })) as ProductWithPrices | null;
 
-    if (!product)
-      return c.json({
-        product: null,
-        message: "Failed to find the product",
-      });
-
-    return c.json({
-      product,
-      message: "Additional message product found",
-    });
+    return c.json(
+      product
+        ? {
+            product: product,
+            message: "Additional message product found",
+          }
+        : {
+            product: null,
+            message: "Failed to find the product",
+          }
+    );
   }),
 
   checkout: dashProcedure
