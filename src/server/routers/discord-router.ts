@@ -176,7 +176,7 @@ export const discordRouter = j.router({
         const permissionsAndScopes =
           mode === "server"
             ? `&permissions=593182191516919&integration_type=0&scope=bot&disable_guild_select=true&guild_id=${guildId}`
-            : "&permissions=593182191516919&integration_type=1&scope=bot";
+            : "&integration_type=1";
 
         return baseUrl + permissionsAndScopes;
       };
