@@ -175,8 +175,8 @@ export const discordRouter = j.router({
           "https://discord.com/oauth2/authorize?client_id=1223326305169182740";
         const permissionsAndScopes =
           mode === "server"
-            ? `&permissions=593182191516919&integration_type=0&scope=bot&disable_guild_select=true&guild_id=${guildId}`
-            : "&integration_type=1";
+            ? `&permissions=593182191516919&integration_type=0&scope=applications.commands+bot&disable_guild_select=true&guild_id=${guildId}`
+            : "&integration_type=1&scope=applications.commands";
 
         return baseUrl + permissionsAndScopes;
       };
